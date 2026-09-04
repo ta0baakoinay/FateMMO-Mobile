@@ -145,6 +145,51 @@ fun diagOverlayJs(): String = """
     var slow = [];          // {u, ms}
     var last = performance.now();
 
+    // ---- WebSocket instrumentation (map / login / char server links) ----
+    var ws = { state: 'none', openedMs: 0, rx: 0, tx: 0, closes: 0, errs: 0, url: '', startedAt: 0 };
+    var _WS = window.WebSocket;
+    if (_WS) {
+        window.WebSocket = function (url, proto) {
+            var s = new _WS(url, proto);
+            ws.url = String(url).replace(/^wss?:\/\//, '');
+            ws.state = 'connecting';
+            ws.startedAt = Date.now();
+            s.addEventListener('open', function () {
+                ws.state = 'open';
+                ws.openedMs = Date.now() - ws.startedAt;
+            });
+            s.addEventListener('message', function () { ws.rx++; });
+            s.addEventListener('close', function (e) { ws.state = 'closed(' + (e && e.code) + ')'; ws.closes++; });
+            s.addEventListener('error', function () { ws.errs++; });
+            var _send = s.send;
+            s.send = function () { ws.tx++; return _send.apply(s, arguments); };
+            return s;
+        };
+        window.WebSocket.prototype = _WS.prototype;
+        window.WebSocket.CONNECTING = 0; window.WebSocket.OPEN = 1;
+        window.WebSocket.CLOSING = 2; window.WebSocket.CLOSED = 3;
+    }
+
+    // ---- console ring buffer (roBrowser logs its phases/errors here) ----
+    var logbuf = [];
+    ['log', 'info', 'warn', 'error'].forEach(function (k) {
+        var orig = console[k];
+        console[k] = function () {
+            try {
+                var m = Array.prototype.slice.call(arguments).map(function (a) {
+                    return typeof a === 'string' ? a : (function () { try { return JSON.stringify(a); } catch (e) { return String(a); } })();
+                }).join(' ');
+                logbuf.push((k === 'error' ? '! ' : k === 'warn' ? '~ ' : '  ') + m.slice(0, 140));
+                if (logbuf.length > 40) { logbuf.shift(); }
+            } catch (e) {}
+            return orig && orig.apply(console, arguments);
+        };
+    });
+    window.addEventListener('error', function (e) {
+        logbuf.push('!! ' + (e.message || 'error') + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno);
+        if (logbuf.length > 40) { logbuf.shift(); }
+    });
+
     function short(u) {
         try { u = String(u).split('?')[0]; } catch (e) {}
         var p = u.split('/'); return p.slice(-2).join('/');
@@ -198,24 +243,29 @@ fun diagOverlayJs(): String = """
         requestAnimationFrame(tick);
     })();
 
+    var hidden = false;
     function build() {
         if (!document.body) { return void document.addEventListener('DOMContentLoaded', build); }
         var d = document.createElement('div');
         d.id = 'fm-diag';
         d.style.cssText =
             'position:fixed;left:2px;top:2px;z-index:2147483646;pointer-events:auto;' +
-            'font:10px/1.35 monospace;color:#7fffca;background:rgba(0,0,0,.62);' +
-            'padding:3px 6px;border-radius:4px;white-space:pre;max-width:70vw;';
-        d.addEventListener('click', function () { d.style.display = 'none'; });
+            'font:9px/1.3 monospace;color:#7fffca;background:rgba(0,0,0,.72);' +
+            'padding:3px 6px;border-radius:4px;white-space:pre;max-width:92vw;max-height:52vh;overflow:hidden;';
+        d.addEventListener('click', function () { hidden = !hidden; d.style.opacity = hidden ? '0.12' : '1'; });
         document.body.appendChild(d);
         setInterval(function () {
-            if (d.style.display === 'none') { return; }
+            if (hidden) { return; }
             var s = Math.round((Date.now() - t0) / 1000);
-            var txt = 'FM diag  ' + s + 's   net ' + nDone + ' ok / ' + nFail + ' fail / ' + inflight + ' pending   ' +
-                (bytes / 1048576).toFixed(1) + ' MB   jank ' + jank + ' (max ' + Math.round(maxGap) + 'ms)';
+            var wl = 'ws ' + ws.state + (ws.openedMs ? ' (' + (ws.openedMs / 1000).toFixed(1) + 's)' : '') +
+                '  rx ' + ws.rx + ' tx ' + ws.tx + (ws.closes ? ' close ' + ws.closes : '') + (ws.errs ? ' ERR ' + ws.errs : '') +
+                (ws.url ? '  ' + ws.url : '');
+            var txt = 'FM diag ' + s + 's   net ' + nDone + '/' + nFail + 'f/' + inflight + 'p  ' +
+                (bytes / 1048576).toFixed(1) + 'MB  jank ' + jank + '(' + Math.round(maxGap) + 'ms)\n' + wl;
             if (slow.length) {
-                txt += '\n slow: ' + slow.map(function (x) { return x.u + ' ' + (x.ms / 1000).toFixed(1) + 's'; }).join('  ');
+                txt += '\nslow: ' + slow.map(function (x) { return x.u + ' ' + (x.ms / 1000).toFixed(1) + 's'; }).join('  ');
             }
+            txt += '\n-- log --\n' + logbuf.slice(-14).join('\n');
             d.textContent = txt;
         }, 500);
     }
