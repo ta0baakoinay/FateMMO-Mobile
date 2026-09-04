@@ -215,7 +215,15 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         webView.onPause()
-        webView.pauseTimers()
+        // Deliberately NOT calling webView.pauseTimers() here: it freezes ALL
+        // JavaScript timers process-wide (not just this WebView), including the
+        // game's WebSocket ping/keepalive and packet handling. Since this is a
+        // live-connection multiplayer client, even a brief background pause
+        // (switching apps, taking a screenshot, a notification) would silently
+        // kill the connection - the socket keeps "working" at the OS level but
+        // nothing processes it until resume, so by the time JS resumes the
+        // server has usually already timed the session out. onPause() alone
+        // still lets the WebView stop non-essential rendering work.
     }
 
     override fun onResume() {
