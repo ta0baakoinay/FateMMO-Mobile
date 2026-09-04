@@ -55,6 +55,15 @@ class Client {
 			Thread.send('SET_HOST', remoteClient);
 		}
 
+		// Worker fast paths for mobile (flat model shading skips a per-model
+		// O(groups*verts*faces) smooth-normal loop that costs minutes/town).
+		try {
+			const mobile = typeof window !== 'undefined' && window.ROConfig && window.ROConfig.mobileUI === true;
+			Thread.send('SET_OPT', { mobile: mobile, flatModels: mobile });
+		} catch (e) {
+			/* ignore */
+		}
+
 		// Save full client
 		savingFiles(files);
 	}

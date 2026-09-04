@@ -152,6 +152,17 @@ class MapLoader {
 		const loader = this;
 		let world;
 
+		// --- phase timing (surfaces in the on-screen diag via THREAD_LOG) ---
+		const _now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+		this._mlt = { start: _now(), mark: _now() };
+		this._mlap = name => {
+			const t = _now();
+			try {
+				postMessage({ type: 'THREAD_LOG', data: ['[MAP] ' + name + ' ' + Math.round(t - this._mlt.mark) + 'ms (t+' + Math.round(t - this._mlt.start) + ')'] });
+			} catch (e) {}
+			this._mlt.mark = t;
+		};
+
 		//  Get file path (if it's a copy of a file)
 		function getFilePath(path) {
 			if (path in FileManager.filesAlias) {
@@ -170,6 +181,7 @@ class MapLoader {
 
 			world = resourceWorld;
 			loader.setProgress(1);
+			loader._mlap('world (.rsw)');
 
 			// Load Altitude
 			FileManager.load(`data\\${getFilePath(world.files.gat)}`, onAltitudeReady);
@@ -184,6 +196,7 @@ class MapLoader {
 
 			loader.setProgress(2);
 			loader.ondata('MAP_ALTITUDE', altitude.compile());
+			loader._mlap('altitude (.gat)');
 
 			FileManager.load(`data\\${getFilePath(world.files.gnd)}`, onGroundReady);
 		}
@@ -202,6 +215,7 @@ class MapLoader {
 				world.water = ground.water;
 			}
 			const compiledGround = ground.compile(world.water.level, world.water.waveHeight);
+			loader._mlap('ground.compile (.gnd)');
 
 			// Just to approximate, guess we have 2 textures for each models
 			// To get a more linear loading
@@ -216,11 +230,13 @@ class MapLoader {
 			loader.loadGroundTextures(world, compiledGround, function onLoaded(waters, textures) {
 				world.water.images = waters;
 				compiledGround.textures = textures;
+				loader._mlap('ground textures (' + textures.length + ')');
 
 				loader.ondata('MAP_WORLD', world.compile());
 				loader.ondata('MAP_GROUND', compiledGround);
 
 				// Start loading models
+				loader._mlap('MAP_WORLD/GROUND emit');
 				loader.loadModels(world.models, ground);
 			});
 		}
@@ -300,6 +316,7 @@ class MapLoader {
 		// Start creating instances
 		loader.onload = (objects, filenames) => {
 			let pos;
+			this._mlap('model files loaded (' + files.length + ' unique / ' + models.length + ' placed)');
 
 			for (i = 0, count = models.length; i < count; ++i) {
 				pos = filenames.indexOf(models[i].filename);
@@ -319,8 +336,10 @@ class MapLoader {
 				objects[pos].filename = filenames[pos];
 				objects[pos].createInstance(models[i], ground.width, ground.height);
 			}
+			this._mlap('model instances');
 
 			this.compileModels(objects);
+			this._mlap('compileModels (' + objects.length + ')');
 		};
 
 		// Start loading models

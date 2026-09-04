@@ -48,6 +48,11 @@ onmessage = function receive(event) {
 			FileManager.remoteClient = msg.data;
 			break;
 
+		// Per-build worker options (e.g. mobile fast paths)
+		case 'SET_OPT':
+			self.__FM_OPT__ = msg.data || {};
+			break;
+
 		// Save full client and use it
 		case 'CLIENT_INIT':
 			FileSystem.bind('onprogress', function (progress) {

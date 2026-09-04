@@ -759,6 +759,15 @@ class RSM {
 		this.version = fp.readByte() + fp.readByte() / 10;
 		this.animLen = fp.readLong();
 		this.shadeType = fp.readLong();
+
+		// Mobile: SMOOTH shading runs calcNormal_SMOOTH, an
+		// O(32 * vertices * faces) triple loop per model - across a town's
+		// worth of models that is minutes on a phone. FLAT is near-identical
+		// at mobile view distance.
+		if (this.shadeType === 2 && typeof self !== 'undefined' && self.__FM_OPT__ && self.__FM_OPT__.flatModels) {
+			this.shadeType = 1;
+		}
+
 		this.main_node = null;
 
 		this.alpha = this.version >= 1.4 ? fp.readUByte() / 255.0 : 1.0;
