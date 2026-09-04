@@ -69,6 +69,9 @@ const remoteAutoFocus = (function removeAutoFocusClosure() {
  * @return {number} distance
  */
 function touchDistance(touches) {
+	if (!touches || touches.length < 2) {
+		return 0;
+	}
 	const x = touches[0].pageX - touches[1].pageX;
 	const y = touches[0].pageY - touches[1].pageY;
 
@@ -82,6 +85,9 @@ function touchDistance(touches) {
  * @return {number} rotation angle
  */
 function touchAngle(touches) {
+	if (!touches || touches.length < 2) {
+		return 0;
+	}
 	const x = touches[0].pageX - touches[1].pageX;
 	const y = touches[0].pageY - touches[1].pageY;
 
@@ -95,6 +101,9 @@ function touchAngle(touches) {
  * @param {TouchList} new touches
  */
 function touchTranslationX(oldTouches, touches) {
+	if (!touches || touches.length < 2 || !oldTouches || oldTouches.length < 2) {
+		return 0;
+	}
 	const x1 = touches[0].pageX - oldTouches[0].pageX;
 	const x2 = touches[1].pageX - oldTouches[1].pageX;
 
@@ -117,6 +126,9 @@ function touchTranslationX(oldTouches, touches) {
  * @param {TouchList} new touches
  */
 function touchTranslationY(oldTouches, touches) {
+	if (!touches || touches.length < 2 || !oldTouches || oldTouches.length < 2) {
+		return 0;
+	}
 	const y1 = touches[0].pageY - oldTouches[0].pageY;
 	const y2 = touches[1].pageY - oldTouches[1].pageY;
 
@@ -161,6 +173,12 @@ const onTouchStart = (function onTouchStartClosure() {
 		_touches = event.touches;
 		event.preventDefault();
 		event.stopImmediatePropagation();
+
+		// No active touch points (interrupted sequence / synthetic event) -
+		// nothing to process, and touches[0] would throw.
+		if (!_touches || !_touches.length) {
+			return;
+		}
 
 		// Delayed click (to detect gesture)
 		if (_timer > -1) {
@@ -220,6 +238,13 @@ function onTouchMove(event) {
 	event.stopImmediatePropagation();
 
 	const touches = event.touches;
+
+	// Empty touch list (interrupted sequence on Android WebView) -> bail
+	// before touches[0].pageX throws. This was flooding the console
+	// hundreds of times/sec and starving the main thread during load.
+	if (!touches || !touches.length) {
+		return;
+	}
 
 	Mouse.screen.x = touches[0].pageX;
 	Mouse.screen.y = touches[0].pageY;
