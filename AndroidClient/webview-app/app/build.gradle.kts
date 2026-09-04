@@ -126,11 +126,102 @@ val generateRoBrowserConfig by tasks.registering {
                     forceUseAddress: true
                 }]
             };
-            """.trimIndent() + "\n" + prefetchBootstrapJs()
+            """.trimIndent() + "\n" + prefetchBootstrapJs() + "\n" + diagOverlayJs()
         )
         logger.lifecycle("Wrote ${f.absolutePath}")
     }
 }
+
+/**
+ * On-screen load diagnostics (no chrome://inspect needed). Wraps fetch + XHR
+ * to count requests / in-flight / bytes / slow URLs, and measures main-thread
+ * jank. Shows a tiny top-left readout. Tap it to hide.
+ */
+fun diagOverlayJs(): String = """
+/* ---- Fate MMO on-screen load diagnostics (auto-generated) ---- */
+(function () {
+    var t0 = Date.now();
+    var nDone = 0, nFail = 0, inflight = 0, bytes = 0, jank = 0, maxGap = 0;
+    var slow = [];          // {u, ms}
+    var last = performance.now();
+
+    function short(u) {
+        try { u = String(u).split('?')[0]; } catch (e) {}
+        var p = u.split('/'); return p.slice(-2).join('/');
+    }
+    function record(u, ms, ok, len) {
+        if (ok) { nDone++; } else { nFail++; }
+        if (len > 0) { bytes += len; }
+        if (ms >= 1200) {
+            slow.push({ u: short(u), ms: Math.round(ms) });
+            slow.sort(function (a, b) { return b.ms - a.ms; });
+            if (slow.length > 6) { slow.length = 6; }
+        }
+    }
+
+    var _fetch = window.fetch;
+    if (_fetch) {
+        window.fetch = function (input, init) {
+            var u = (input && input.url) || input;
+            var s = performance.now();
+            inflight++;
+            return _fetch.apply(this, arguments).then(function (res) {
+                inflight--;
+                var len = parseInt(res.headers && res.headers.get && res.headers.get('content-length'), 10) || 0;
+                record(u, performance.now() - s, res.ok, len);
+                return res;
+            }, function (err) {
+                inflight--; record(u, performance.now() - s, false, 0);
+                throw err;
+            });
+        };
+    }
+
+    var _open = XMLHttpRequest.prototype.open;
+    var _send = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function (m, u) { this.__u = u; this.__s = 0; return _open.apply(this, arguments); };
+    XMLHttpRequest.prototype.send = function () {
+        var x = this; x.__s = performance.now(); inflight++;
+        x.addEventListener('loadend', function () {
+            inflight--;
+            var len = 0; try { len = parseInt(x.getResponseHeader('content-length'), 10) || 0; } catch (e) {}
+            record(x.__u, performance.now() - x.__s, x.status >= 200 && x.status < 400, len);
+        });
+        return _send.apply(this, arguments);
+    };
+
+    // main-thread jank meter
+    (function tick() {
+        var now = performance.now();
+        var gap = now - last; last = now;
+        if (gap > 250) { jank++; if (gap > maxGap) { maxGap = gap; } }
+        requestAnimationFrame(tick);
+    })();
+
+    function build() {
+        if (!document.body) { return void document.addEventListener('DOMContentLoaded', build); }
+        var d = document.createElement('div');
+        d.id = 'fm-diag';
+        d.style.cssText =
+            'position:fixed;left:2px;top:2px;z-index:2147483646;pointer-events:auto;' +
+            'font:10px/1.35 monospace;color:#7fffca;background:rgba(0,0,0,.62);' +
+            'padding:3px 6px;border-radius:4px;white-space:pre;max-width:70vw;';
+        d.addEventListener('click', function () { d.style.display = 'none'; });
+        document.body.appendChild(d);
+        setInterval(function () {
+            if (d.style.display === 'none') { return; }
+            var s = Math.round((Date.now() - t0) / 1000);
+            var txt = 'FM diag  ' + s + 's   net ' + nDone + ' ok / ' + nFail + ' fail / ' + inflight + ' pending   ' +
+                (bytes / 1048576).toFixed(1) + ' MB   jank ' + jank + ' (max ' + Math.round(maxGap) + 'ms)';
+            if (slow.length) {
+                txt += '\n slow: ' + slow.map(function (x) { return x.u + ' ' + (x.ms / 1000).toFixed(1) + 's'; }).join('  ');
+            }
+            d.textContent = txt;
+        }, 500);
+    }
+    build();
+})();
+"""
 
 /**
  * Appended to the generated Config.local.js. A standalone, framework-free
