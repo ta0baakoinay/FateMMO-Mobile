@@ -31,10 +31,18 @@ class Loader {
 
 	/**
 	 * @var {number} How many files do you want to load at the same time ?
-	 * PHP servers: keep at 4-6 to avoid connection exhaustion.
+	 * PHP servers: the generic guidance is 4-6 to avoid connection
+	 * exhaustion, but that's overly conservative for this deployment -
+	 * verified directly (2026-09-04): Apache's prefork MPM here allows up
+	 * to 150 concurrent workers and only 6 were ever in use, with 2.3GB RAM
+	 * free. Cold/uncached towns (first visit by any player - individual
+	 * files fall back to a live GRF read server-side) were taking 30-50s+
+	 * just for the model-loading phase because only 6 of that town's
+	 * often 50-100+ unique models were ever in flight at once. Raised with
+	 * real server headroom to back it, not a guess.
 	 * Node.js (RemoteClient-JS): supports 12+ with HTTP/2 multiplexing.
 	 */
-	parallelDownload = 6;
+	parallelDownload = 10;
 
 	/**
 	 * Start to load the list
