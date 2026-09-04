@@ -215,6 +215,16 @@ class MapEngine {
 					ping = new PACKET.CZ.REQUEST_TIME();
 				}
 				const startTick = Date.now();
+				// If the connection dies silently (no close/error event - seen on some
+				// mobile networks where outbound sends keep "succeeding" into a dead
+				// socket while nothing comes back), the server-side stall_time timeout
+				// is the only thing that would eventually notice, which can take
+				// minutes. Detect it client-side instead: after several consecutive
+				// unanswered pings (30s of confirmed silence), force the socket closed
+				// so the existing disconnect handling (NetworkManager's onClose ->
+				// "Disconnected from Server" box) kicks in immediately instead of the
+				// game sitting there indefinitely.
+				let missedPings = 0;
 				Network.setPing(() => {
 					if (is_sec_hbt) {
 						Network.sendPacket(hbt);
@@ -223,7 +233,15 @@ class MapEngine {
 					ping.clientTime = Date.now() - startTick;
 
 					if (!SP.returned && SP.pingTime) {
-						console.warn('[Network] The server did not answer the previous PING!');
+						missedPings++;
+						console.warn('[Network] The server did not answer the previous PING! (' + missedPings + ' in a row)');
+						if (missedPings >= 3) {
+							console.error('[Network] Connection appears dead (' + missedPings + ' consecutive missed pings), forcing disconnect.');
+							Network.close();
+							return;
+						}
+					} else {
+						missedPings = 0;
 					}
 					SP.pingTime = ping.clientTime;
 					SP.returned = false;
