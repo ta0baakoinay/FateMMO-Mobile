@@ -1,0 +1,10 @@
+/AI/*
+/BGM/*
+/data/*
+/resources/*
+/System/*
+.env
+.idea
+# Generated files
+path-mapping.json
+test_config.php

@@ -1,0 +1,38 @@
+# ---- build outputs / caches ----
+**/build/
+**/.gradle/
+**/.kotlin/
+AndroidClient/webview-app/local.properties
+AndroidClient/vendor/roBrowserLegacy/node_modules/
+AndroidClient/vendor/roBrowserLegacy/dist/
+AndroidClient/vendor/roBrowserLegacy/.rollup.cache/
+AndroidClient/vendor/roBrowserLegacy/coverage/
+
+# ---- generated roBrowser web bundle (rebuilt from src) ----
+# keep only assets we author ourselves
+AndroidClient/webview-app/app/src/main/assets/web/*
+!AndroidClient/webview-app/app/src/main/assets/web/bg_loading.jpg
+
+# ---- big binaries / artifacts (re-obtainable, or not redistributable) ----
+AndroidClient/artifacts/
+*.apk
+*.aab
+*.keystore
+*.jks
+*.zip
+
+# supplied source material - huge and/or not for public redistribution
+/Client/
+/Server/
+RagnaFinest_v623.apk
+
+# vendored upstream repos flattened into this tree (their history lives upstream)
+**/_git_vendored_disabled/
+
+# ---- OS / IDE ----
+.DS_Store
+Thumbs.db
+*.iml
+.idea/
+.vscode/
+*.log

@@ -1,0 +1,18 @@
+# build output
+webview-app/.gradle/
+webview-app/build/
+webview-app/app/build/
+webview-app/local.properties
+webview-app/app/src/main/assets/web/Config.local.js   # generated from client.env.properties
+
+# vendored upstream checkouts (re-clone via server-bundle/README + ANDROID_CLIENT_BUILD.md)
+vendor/*/node_modules/
+vendor/roBrowserLegacy/dist/
+
+# signing — NEVER commit
+*.jks
+*.keystore
+keystore.properties
+
+# server bundle: don't commit the 1.7 GB GRF
+server-bundle/**/resources/*.grf

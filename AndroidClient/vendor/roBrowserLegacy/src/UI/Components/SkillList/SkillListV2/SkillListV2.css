@@ -1,0 +1,634 @@
+:host {
+	top: 100px;
+	left: 100px;
+}
+
+#SkillListV2 {
+	position: absolute;
+	border-radius: 5px;
+	background: white;
+	line-height: 18px;
+	letter-spacing: 0px;
+	border: 1px solid #c1c6c2;
+}
+#SkillListV2 .border {
+	border: 1px solid #c1c6c2;
+	margin: 1px;
+	border-radius: 5px;
+}
+
+#SkillListV2 .titlebar {
+	height: 18px;
+	background-color: white;
+	background-repeat: repeat-x;
+	background-position: 0 -1px;
+	border-radius: 3px 3px 0px 0px;
+}
+#SkillListV2 .titlebar .base {
+	width: 11px;
+	height: 11px;
+	border: none;
+	background-color: transparent;
+	background-repeat: no-repeat;
+	vertical-align: middle;
+}
+#SkillListV2 .titlebar .text {
+	text-shadow: 1px 1px white;
+	vertical-align: -2px;
+	white-space: nowrap;
+	/* chrome bug */
+	display: inline-block;
+	width: 60px;
+	height: 13px;
+	font-size: 11px;
+	font-weight: bold;
+}
+
+#SkillListV2 .titlebar .left {
+	margin-left: 3px;
+	float: left;
+	height: 18px;
+}
+#SkillListV2 .titlebar .right {
+	float: right;
+	margin-right: 3px;
+}
+#SkillListV2 .titlebar .clear {
+	clear: both;
+}
+
+#SkillListV2 .content {
+	position: relative;
+	padding: 5px;
+	border-top: 1px solid #c6c6c6;
+	width: 270px;
+	height: 200px;
+}
+#SkillListV2 .content table {
+	border: none;
+	border-spacing: 0px;
+	padding-top: 5px;
+}
+#SkillListV2 .content td,
+#SkillListV2 .content .name {
+	padding: 0px;
+}
+
+/* Mini Tab*/
+#SkillListV2 .tabs-mini {
+	position: relative;
+}
+#SkillListV2 .tabs-mini::before,
+#SkillListV2 .tabs-mini::after {
+	content: '';
+	display: table;
+}
+#SkillListV2 .tabs-mini::after {
+	clear: both;
+}
+#SkillListV2 .tab-switch-mini {
+	display: none;
+}
+#SkillListV2 .tab-label-mini {
+	writing-mode: vertical-lr;
+	text-orientation: upright;
+	left: -23px;
+	width: 18px;
+	position: relative;
+	margin: -3px 0;
+	border: 1px solid #c1c6c2;
+	background: #fff;
+	border-radius: 5px 0 0 5px;
+	cursor: pointer;
+}
+#SkillListV2 .tab-content-mini {
+	overflow-y: auto;
+	overflow-x: hidden;
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	z-index: 1;
+	left: 0;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	opacity: 0;
+}
+#SkillListV2 .tab-switch-mini:checked + .tab-label-mini {
+	width: 20px;
+	left: -25px;
+	z-index: 1;
+}
+#SkillListV2 .tab-switch-mini:checked + label + .tab-content-mini {
+	z-index: 2;
+	opacity: 1;
+}
+
+#SkillListV2 .levelup {
+	border: 0;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	background-repeat: no-repeat;
+	background-color: transparent;
+}
+#SkillListV2 td.type {
+	vertical-align: bottom;
+}
+
+#SkillListV2 .content .icon {
+	padding-left: 15px;
+}
+#SkillListV2 .content .levelupcontainer {
+	padding-left: 5px;
+	padding-right: 5px;
+	width: 24px;
+}
+#SkillListV2 .content div.name {
+	line-height: 12px;
+	white-space: nowrap;
+	padding-left: 5px;
+	white-space: nowrap;
+	width: 120px;
+	padding-top: 4px;
+	height: 28px;
+}
+#SkillListV2 .disabled .icon,
+#SkillListV2 .disabled .name {
+	opacity: 0.5;
+}
+#SkillListV2 .disabled .consume,
+#SkillListV2 .disabled .level {
+	display: none;
+}
+#SkillListV2 .currentDown,
+#SkillListV2 .currentUp {
+	width: 11px;
+	height: 11px;
+	border: none;
+	background-color: transparent;
+	background-repeat: no-repeat;
+	vertical-align: middle;
+}
+
+#SkillListV2 .selected.disabled .selectable {
+	background-color: #b5b5b5;
+}
+#SkillListV2 .selected.passive .selectable {
+	background-color: #73d5ee;
+}
+/*#SkillListV2 .selected.active .selectable { background-color:#739cee;}*/
+
+#SkillListV2 .footer {
+	width: 100%;
+	height: 27px;
+	background-repeat: repeat-x;
+	background-color: transparent;
+	position: relative;
+}
+#SkillListV2 .footer .text {
+	padding-top: 7px;
+	margin-left: 10px;
+}
+#SkillListV2 .footer .btn {
+	position: absolute;
+	top: 5px;
+	border: 0;
+	width: 42px;
+	height: 20px;
+	background-repeat: no-repeat;
+	background-color: transparent;
+	display: none;
+}
+#SkillListV2 .footer .apply {
+	right: 70px;
+}
+#SkillListV2 .footer .reset {
+	right: 20px;
+}
+#SkillListV2 .footer .extend {
+	position: absolute;
+	right: 0px;
+	bottom: 1px;
+	width: 13px;
+	height: 13px;
+	border: none;
+	background-repeat: no-repeat;
+	background-color: transparent;
+}
+
+#lvlup_job {
+	z-index: 51;
+	position: absolute;
+	right: 0px;
+	bottom: 0px;
+	width: 43px;
+	height: 43px;
+	border: none;
+	background-color: transparent;
+	background-repeat: no-repeat;
+}
+
+#SkillListV2 .tab-content {
+	overflow-y: auto;
+	padding: 5px;
+	border-top: 1px solid #c6c6c6;
+	width: calc(100% - 12px);
+	height: 375px;
+}
+
+/* skill tree with tabs */
+#SkillListV2 .skillCol .name,
+#SkillListV2 .skillCol .selectable {
+	position: relative;
+	text-align: center;
+	display: block;
+	width: 70px;
+	left: -23px;
+}
+#SkillListV2 .skillCol .skill {
+	position: relative;
+	top: -16px;
+}
+#SkillListV2 .skillRow {
+	display: flex;
+	padding-left: 40px;
+}
+#SkillListV2 .skillCol {
+	position: relative;
+	margin: 15px 17px;
+	border: 1px dashed #c0c0c0ff;
+	border-radius: 5px;
+	width: 28px;
+	height: 28px;
+	text-align: center;
+	white-space: nowrap;
+}
+#SkillListV2 .tabs {
+	position: relative;
+}
+#SkillListV2 .tabs::before,
+#SkillListV2 .tabs::after {
+	content: '';
+	display: table;
+}
+#SkillListV2 .tabs::after {
+	clear: both;
+}
+#SkillListV2 .tab-switch {
+	display: none;
+}
+#SkillListV2 .tab-label {
+	writing-mode: vertical-lr;
+	text-orientation: upright;
+	left: -23px;
+	width: 18px;
+	position: relative;
+	margin: -3px 0;
+	border: 1px solid #c1c6c2;
+	background: #fff;
+	border-radius: 5px 0 0 5px;
+	cursor: pointer;
+}
+#SkillListV2 .tab-content {
+	position: absolute;
+	z-index: 1;
+	left: 0;
+	top: 0;
+	opacity: 0;
+}
+#SkillListV2 .tab-switch:checked + .tab-label {
+	width: 20px;
+	left: -25px;
+	z-index: 1;
+}
+#SkillListV2 .tab-switch:checked + label + .tab-content {
+	z-index: 2;
+	opacity: 1;
+}
+#SkillListV2 .needleSkill {
+	background: pink !important;
+}
+#SkillListV2 .upgradable {
+	background: #c0cdff;
+}
+#SkillListV2 .counterSkill {
+	position: absolute;
+	left: 28px;
+	top: 18px;
+	color: #fff;
+	-webkit-text-stroke: 0.6px #2f2f2f;
+	font-weight: 1000;
+}
+
+/* =====================================================================
+ * Mobile Skills UI  -  RagnaFinest look: a compact DARK list, one tall
+ * row per skill  ( [icon]  Name / Lv : N / Passive ),  divider lines,
+ * "Skill Points: N" pinned at the bottom.
+ *
+ *  - NO zoom / NO transform on :host  (they distort touch.pageXY vs
+ *    document.elementFromPoint  ->  breaks SkillListCommon.js drag-to-cast)
+ *  - the panel is only as TALL as its skills (max-height caps it well
+ *    clear of the bottom-left joystick); it scrolls only when it must
+ *  - docked a little in from the left so the 1st/2nd/3rd job tab labels
+ *    (which sit at negative offset) stay on-screen
+ * ===================================================================== */
+:host {
+	top: 6px !important;
+	left: 8px !important;
+	max-width: 100vw;
+}
+
+#SkillListV2 {
+	width: min(94vw, 440px);
+	max-width: 98vw;
+	background: rgba(11, 13, 18, 0.96) !important;
+	border: 1px solid #2c313d !important;
+	color: #eaecef;
+	line-height: normal;
+}
+#SkillListV2 .border {
+	border-color: #2c313d !important;
+}
+
+/* MOBILE: always the scrollable LIST view - the PC skill-tree grid is
+   unusable on a phone (cramped, truncated names, double scrollbars). */
+#SkillListV2 .contentbig {
+	display: none !important;
+}
+#SkillListV2 .content {
+	display: block !important;
+	width: 100% !important;
+	max-width: 98vw;
+	height: auto !important;
+	max-height: calc(100vh - 150px) !important;
+	overflow-y: auto !important;
+	overflow-x: hidden !important;
+	-webkit-overflow-scrolling: touch;
+	padding: 0 !important;
+	border-top: 1px solid #2c313d !important;
+	background: transparent !important;
+}
+/* hide the "expand to tree view" toggle so it can't be flipped */
+#SkillListV2 .footer .extend {
+	display: none !important;
+}
+
+/* ---- job tabs (1st / 2nd / 3rd / 4th / Etc) as a real horizontal bar ----
+   Without this they sit at a negative offset off the left edge and the
+   player can't switch to their 2nd/3rd-job skills. */
+#SkillListV2 .tab-mini {
+	display: contents;
+}
+#SkillListV2 .tabs-mini {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	position: relative;
+	gap: 3px 3px;
+	padding: 6px 6px 0;
+}
+#SkillListV2 .tab-label-mini {
+	writing-mode: horizontal-tb;
+	text-orientation: mixed;
+	position: static;
+	order: 0;
+	flex: 0 0 auto;
+	left: auto;
+	width: auto;
+	height: auto;
+	margin: 0;
+	padding: 8px 14px;
+	font-size: 13px;
+	border: 1px solid #2c313d;
+	border-bottom: none;
+	border-radius: 7px 7px 0 0;
+	background: #161922;
+	color: #cfd4dd;
+}
+#SkillListV2 .tab-switch-mini:checked + .tab-label-mini {
+	left: auto;
+	width: auto;
+	background: #2f3a58;
+	color: #fff;
+	z-index: auto;
+}
+#SkillListV2 .tab-content-mini {
+	order: 1;
+	flex: 0 0 100%;
+	position: absolute !important;
+	height: 0 !important;
+	overflow: hidden !important;
+	opacity: 0;
+}
+#SkillListV2 .tab-switch-mini:checked + label + .tab-content-mini {
+	position: relative !important;
+	height: auto !important;
+	min-height: 60px;
+	overflow-y: auto !important;
+	opacity: 1;
+}
+#SkillListV2 .tab-content {
+	max-height: none !important;
+}
+/* thin scrollbar instead of the giant blue arrow bar */
+#SkillListV2 .content::-webkit-scrollbar,
+#SkillListV2 .contentbig::-webkit-scrollbar,
+#SkillListV2 .tab-content-mini::-webkit-scrollbar {
+	width: 5px;
+	height: 5px;
+}
+#SkillListV2 .content::-webkit-scrollbar-button,
+#SkillListV2 .contentbig::-webkit-scrollbar-button,
+#SkillListV2 .tab-content-mini::-webkit-scrollbar-button {
+	display: none;
+	width: 0;
+	height: 0;
+}
+#SkillListV2 .content::-webkit-scrollbar-thumb,
+#SkillListV2 .contentbig::-webkit-scrollbar-thumb,
+#SkillListV2 .tab-content-mini::-webkit-scrollbar-thumb {
+	background: #4a505e;
+	border-radius: 3px;
+}
+#SkillListV2 .content::-webkit-scrollbar-track,
+#SkillListV2 .contentbig::-webkit-scrollbar-track,
+#SkillListV2 .tab-content-mini::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+/* ---- LIST VIEW: one tall row per skill ---- */
+#SkillListV2 .content table {
+	width: 100%;
+	padding-top: 0 !important;
+}
+#SkillListV2 .content table tr {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+#SkillListV2 .content td {
+	vertical-align: middle;
+	padding: 6px 0 !important;
+}
+#SkillListV2 .content .icon {
+	padding-left: 12px !important;
+	width: 50px;
+}
+#SkillListV2 .content .icon img,
+#SkillListV2 .content td.icon img {
+	width: 36px !important;
+	height: 36px !important;
+	image-rendering: pixelated;
+	vertical-align: middle;
+}
+/* name on line 1, "Lv : N" on line 2 (the row's <br>) - NOT flex */
+#SkillListV2 .content div.name {
+	display: block !important;
+	width: auto !important;
+	min-width: 0 !important;
+	height: auto !important;
+	line-height: 18px;
+	padding: 4px 8px !important;
+	font-size: 15px;
+	font-weight: bold;
+	color: #f2f4f7;
+	white-space: normal !important;
+}
+#SkillListV2 .content div.name .level {
+	display: inline-block;
+	margin-top: 2px;
+	font-size: 12px;
+	font-weight: normal;
+	color: #9db3d0;
+}
+#SkillListV2 .content td.type {
+	padding-right: 12px !important;
+	text-align: right;
+	vertical-align: middle;
+}
+#SkillListV2 .content td.type .consume {
+	font-size: 11px;
+	color: #8bc7a3;
+	white-space: nowrap;
+}
+#SkillListV2 .content .levelupcontainer {
+	width: 44px !important;
+	padding: 0 6px !important;
+}
+#SkillListV2 .levelup {
+	width: 38px !important;
+	height: 38px !important;
+}
+#SkillListV2 .currentDown,
+#SkillListV2 .currentUp {
+	width: 22px !important;
+	height: 22px !important;
+}
+#SkillListV2 .disabled .icon,
+#SkillListV2 .disabled .name {
+	opacity: 0.45;
+}
+/* the "just for reference, will be removed" measuring button that sometimes
+   lingers as a stray icon at the top of the list */
+#SkillListV2 .content > .btn.levelup {
+	display: none !important;
+}
+
+/* ---- TREE VIEW (secondary): dark, bigger cells, no transform ---- */
+#SkillListV2 .skillRow {
+	padding-left: 14px !important;
+	flex-wrap: wrap;
+}
+#SkillListV2 .skillCol {
+	width: 42px !important;
+	height: 42px !important;
+	margin: 16px 18px !important;
+	border-color: #3a404d !important;
+}
+#SkillListV2 .skillCol .skill {
+	top: 0 !important;
+}
+#SkillListV2 .skillCol .skill .icon img,
+#SkillListV2 .skillCol .icon img {
+	width: 40px !important;
+	height: 40px !important;
+	image-rendering: pixelated;
+}
+#SkillListV2 .skillCol .name,
+#SkillListV2 .skillCol .selectable {
+	width: 84px !important;
+	left: -21px !important;
+	font-size: 11px;
+	color: #cfd4dd;
+}
+
+/* ---- TITLEBAR: dark, fix the clipped "Skill Tree" text ---- */
+#SkillListV2 .titlebar {
+	height: 36px;
+	background: #161922 !important;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+#SkillListV2 .titlebar ui-image,
+#SkillListV2 .footer ui-image {
+	display: none !important;
+}
+#SkillListV2 .titlebar .left,
+#SkillListV2 .titlebar .right {
+	float: none;
+	height: 36px;
+	display: flex;
+	align-items: center;
+}
+#SkillListV2 .titlebar .text {
+	width: auto !important;
+	min-width: 120px;
+	height: auto;
+	font-size: 15px;
+	font-weight: bold;
+	color: #ffffff;
+	text-shadow: none;
+}
+#SkillListV2 .titlebar .right {
+	font-size: 12px;
+	color: #aab0bd;
+}
+#SkillListV2 .titlebar .base {
+	width: 26px !important;
+	height: 26px !important;
+}
+#SkillListV2 .titlebar .view_skill_info {
+	transform: scale(1.25);
+	margin: 0 6px;
+}
+
+/* ---- FOOTER: "Skill Points: N" + apply/reset ---- */
+#SkillListV2 .footer {
+	height: 42px !important;
+	background: #161922 !important;
+	flex: none;
+}
+#SkillListV2 .footer .text {
+	padding-top: 12px;
+	margin-left: 12px;
+	font-size: 15px;
+	color: #ffffff;
+}
+#SkillListV2 .footer .btn {
+	width: 58px !important;
+	height: 30px !important;
+	top: 6px;
+}
+#SkillListV2 .footer .extend {
+	width: 26px !important;
+	height: 26px !important;
+}
+
+/* vertical job-tab labels (1st / 2nd / 3rd / Etc) - dark + reachable */
+#SkillListV2 .tab-label-mini,
+#SkillListV2 .tab-label {
+	background: #161922 !important;
+	border-color: #2c313d !important;
+	color: #cfd4dd !important;
+	padding: 4px 2px;
+}

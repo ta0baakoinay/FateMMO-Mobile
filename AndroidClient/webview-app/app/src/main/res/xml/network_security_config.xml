@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Private-server dev client: cleartext is permitted so the WebView can
+  (a) load the bundled roBrowser over http://appassets.androidplatform.net
+  (b) reach the rAthena host, wsProxy and Remote Client over ws:// / http://.
+  For a public deployment, put a TLS domain in front of wsProxy + Remote Client
+  (wss:// + https://) and tighten this file to that domain only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

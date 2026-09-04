@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+#  Fate MMO — roBrowser backend services
+#
+#  RUN THIS ON THE PROXY HOST (167.104.101.102). The main IP (51.79.147.208)
+#  stays private; the proxy already forwards the rAthena ports and is what
+#  subnet_athena.conf advertises to clients.
+#
+#  Prereq on the proxy host:
+#     git clone https://github.com/MrAntares/roBrowserLegacy-RemoteClient-PHP.git
+#     cp remote-client/DATA.INI roBrowserLegacy-RemoteClient-PHP/resources/DATA.INI
+#     cp /path/to/Fate.grf palettes.grf hd.grf data.grf \
+#        roBrowserLegacy-RemoteClient-PHP/resources/
+#
+#     docker compose up -d --build
+#
+#  Ports (must match webview-app/client.env.properties):
+#     8000 -> Remote Client (serves the 4 GRFs over HTTP)
+#     5999 -> wsProxy       (WebSocket <-> rAthena TCP)
+#
+#  wsProxy dials 167.104.101.102:{6900,6121,5121}; make sure the proxy forwards
+#  those to the *mobile* rAthena instance (packetver 20180620, obfuscation off) —
+#  NOT your 2026 main instance. See README.md §1.
+# ---------------------------------------------------------------------------
+services:
+  remote-client:
+    build:
+      context: ./roBrowserLegacy-RemoteClient-PHP
+      dockerfile: docker/apache/Dockerfile
+    volumes:
+      - ./roBrowserLegacy-RemoteClient-PHP:/var/www/html
+    environment:
+      DEBUG: "false"
+      CLIENT_DATAINI: "DATA.INI"
+      # Fate.grf load order (Fate first = highest priority) is set by resources/DATA.INI.
+      # Try CP949 first; if korean-named textures 404 with mojibake, rebuild UTF-8.
+      GRF_ENCODING: "CP949"
+      CLIENT_AUTOEXTRACT: "true"
+      MEMORY_LIMIT: "2000M"
+    ports:
+      - "8000:80"
+    restart: unless-stopped
+
+  wsproxy:
+    image: node:20-alpine
+    working_dir: /app
+    command: >
+      sh -c "npm i -g wsproxy >/dev/null 2>&1 &&
+             exec wsproxy -p 5999 -a 167.104.101.102:6900,167.104.101.102:6121,167.104.101.102:5121"
+    ports:
+      - "5999:5999"
+    restart: unless-stopped
