@@ -104,9 +104,6 @@ val generateRoBrowserConfig by tasks.registering {
                 forceUseAddress: true,
                 mobileUI: true,
                 loadingFallbackImage: "bg_loading.jpg",
-                // read System/itemInfo*.lub for item names (the legacy
-                // idnum2itemdisplaynametable.txt in this GRF is mis-encoded)
-                loadLua: true,
                 // mobile GPU relief: render at 70% res, cap pixel ratio
                 quality: 70,
                 maxPixelRatio: 1.5,
