@@ -242,7 +242,17 @@ class MapEngine {
 
 					ping.clientTime = Date.now() - startTick;
 
-					if (SP.returned) {
+					// A map load in progress can legitimately block pong *processing* on
+					// the main thread for a long time (measured 40s+ on a slow/uncached
+					// map - see the ground-textures/model-loading phase timers) without
+					// the connection actually being dead. Don't let the watchdog count
+					// any of that time, no matter how long a given map takes to load -
+					// this must work the same for every map, not just the ones already
+					// measured, so it's gated on the loader's own state instead of a
+					// bigger fixed timeout.
+					if (MapRenderer.loading) {
+						lastPongAt = Date.now();
+					} else if (SP.returned) {
 						lastPongAt = Date.now();
 					} else if (SP.pingTime) {
 						const silentFor = Date.now() - lastPongAt;
