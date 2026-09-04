@@ -104,6 +104,9 @@ val generateRoBrowserConfig by tasks.registering {
                 forceUseAddress: true,
                 mobileUI: true,
                 loadingFallbackImage: "bg_loading.jpg",
+                // read System/itemInfo*.lub for item names (the legacy
+                // idnum2itemdisplaynametable.txt in this GRF is mis-encoded)
+                loadLua: true,
                 autoLogin: ${if (env.getProperty("CLIENT_AUTOLOGIN")?.isNotBlank() == true) "[${env("CLIENT_AUTOLOGIN")}]" else "[]"},
                 remoteClient: "${env("CLIENT_REMOTE_CLIENT_URL")}",
                 servers: [{
