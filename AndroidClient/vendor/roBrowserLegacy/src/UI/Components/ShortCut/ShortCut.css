@@ -118,3 +118,9 @@
 	z-index: 999;
 	background: conic-gradient(rgba(0, 0, 0, 0.75) 0deg, transparent 0deg);
 }
+
+/* Mobile: hide the top F1-F9 hotbar entirely - skills live on the on-screen
+   F1-F9 buttons instead. The slot logic still runs (F-key -> cast). */
+:host {
+	display: none !important;
+}

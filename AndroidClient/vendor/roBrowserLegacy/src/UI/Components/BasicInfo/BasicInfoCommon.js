@@ -79,19 +79,22 @@ export function createBasicInfo(config) {
 	/**
 	 * @let {Preferences} structure
 	 */
+	// On mobile the menu-icon grid is big and in the way - start it collapsed
+	// (tap the panel's arrow handle to open it).
+	const _mobileUI = typeof window !== 'undefined' && window.ROConfig && window.ROConfig.mobileUI === true;
 	const _preferences = Preferences.get(
 		prefKey,
 		{
 			x: 0,
 			y: 0,
 			reduce: reduceDefault,
-			buttons: true,
+			buttons: !_mobileUI,
 			magnet_top: true,
 			magnet_bottom: false,
 			magnet_left: true,
 			magnet_right: false
 		},
-		1.0
+		_mobileUI ? 1.2 : 1.0
 	);
 
 	/**

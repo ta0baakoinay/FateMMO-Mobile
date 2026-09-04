@@ -428,6 +428,18 @@ in-game loading screen.
   translucent blurred log `min(74vw,660px)` × 26vh; 13 px log text, 14 px input;
   `Send to` 84 px + wide `Chat message`; bigger filter/size buttons + tabs.
 
+## v0.1.10 — declutter
+
+- **Top F1-F9 hotbar removed** — `ShortCut/ShortCut.css` `:host { display:none !important }`.
+  The slot logic still runs (F-key press -> `clickElement` -> cast); skills live only
+  on the on-screen F1-F9 buttons now (which show their icons since v0.1.9).
+- **Character-Info menu grid starts collapsed on mobile** — `BasicInfoCommon.js`
+  `buttons: !mobileUI` default, pref version bumped to 1.2 so it re-applies. The
+  panel is just the stat lines + a **22px arrow handle** (`BasicInfoV4.css .bt_menu`)
+  to open the grid when needed.
+- **Chat shrunk** (`ChatBox.css`): log `min(56vw,460px)` × 13vh (was 26vh), 12px text,
+  `rgba(0,0,0,0.4)`; input bar 34px.
+
 ### Known / not fixed this round
 - **Item names are mojibake** ("ƒoƒCƒlƒŠ..."). `langtype=1` → roBrowser decodes the
   item-name table as `windows-1252`; the Fate table looks Shift-JIS/other. Needs a

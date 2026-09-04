@@ -322,6 +322,12 @@
 	width: 15px;
 	height: 15px;
 }
+/* the arrow handle that opens/closes the menu grid - a real tap target */
 #BasicInfoV4 .bt_menu {
-	height: 12px;
+	height: 22px !important;
+	width: 232px !important;
+	background-color: rgba(20, 22, 30, 0.55);
+	background-size: 22px 22px;
+	background-position: center;
+	border-radius: 0 0 6px 6px;
 }
