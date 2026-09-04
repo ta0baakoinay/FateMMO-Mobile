@@ -1070,12 +1070,19 @@ function toggleStatus() {
  * Toggles touch targeting
  */
 function toggleTouchTargeting() {
+	// Null-safe: this now also runs once from MobileUI.init(), which fires
+	// synchronously inside MapRenderer.onLoad() - BEFORE Renderer.show() is
+	// called - as part of the very first map entry after launch. A throw
+	// here would abort that whole callback and leave the loading screen up
+	// forever (the exact black-screen-after-char-select symptom). The
+	// Session flag must always update even if the (optional) button
+	// elements aren't queryable yet.
 	const root = MobileUI.getRoot();
 
 	if (Session.TouchTargeting) {
-		root.querySelector('#toggleTargetingButton').classList.remove('active');
-		root.querySelector('#toggleAutoFollowButton').classList.add('disabled');
-		root.querySelector('#toggleAutoTargetButton').classList.add('disabled');
+		root?.querySelector('#toggleTargetingButton')?.classList.remove('active');
+		root?.querySelector('#toggleAutoFollowButton')?.classList.add('disabled');
+		root?.querySelector('#toggleAutoTargetButton')?.classList.add('disabled');
 
 		if (Session.AutoTargeting) {
 			toggleAutoTargeting();
@@ -1083,9 +1090,9 @@ function toggleTouchTargeting() {
 
 		Session.TouchTargeting = false;
 	} else {
-		root.querySelector('#toggleTargetingButton').classList.add('active');
-		root.querySelector('#toggleAutoFollowButton').classList.remove('disabled');
-		root.querySelector('#toggleAutoTargetButton').classList.remove('disabled');
+		root?.querySelector('#toggleTargetingButton')?.classList.add('active');
+		root?.querySelector('#toggleAutoFollowButton')?.classList.remove('disabled');
+		root?.querySelector('#toggleAutoTargetButton')?.classList.remove('disabled');
 
 		Session.TouchTargeting = true;
 	}

@@ -723,7 +723,20 @@ function onMapChange(pkt) {
 		WorldMap.append();
 		SkillListMH.homunculus.append();
 		SkillListMH.mercenary.append();
-		MobileUI.append();
+		// This is the ONE time MobileUI.init() ever runs (GUIComponent only
+		// initialises a component on its first .append()), and it happens
+		// synchronously inside MapRenderer.onLoad() - itself inside
+		// Background.remove()'s callback, BEFORE Renderer.show()/render()
+		// are reached below. Any uncaught throw here aborts that whole
+		// callback silently: the loading background never gets removed and
+		// the player is stuck on a black screen with no error shown. Guard
+		// it so a future bug in mobile UI setup can degrade (no touch
+		// controls) instead of freezing map entry entirely.
+		try {
+			MobileUI.append();
+		} catch (e) {
+			console.error('[MapEngine] MobileUI.append() failed - continuing without it', e);
+		}
 		// Packaged-as-an-app builds force the touch control layer on regardless of
 		// whether a touch event has fired yet (Config.local.js: mobileUI: true).
 		try {
