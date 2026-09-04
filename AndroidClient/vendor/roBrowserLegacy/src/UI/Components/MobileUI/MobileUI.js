@@ -290,6 +290,17 @@ MobileUI.init = function init() {
 	// Initialize the NPC Talk Button - MicromeX
 	setupTalkToNpcButton();
 
+	// Mobile: default TouchTargeting ON. This reuses roBrowser's own existing
+	// SkillTargetSelection.set() logic (SkillTargetSelection.js) - when it's
+	// on and a focus entity already exists (the monster you're already
+	// attacking/have selected), an F1-F9 skill fires on it immediately with
+	// no crosshair step; only falls back to manual target-tap when nothing
+	// is currently targeted. Desktop/other builds are unaffected (default
+	// stays false there); this only flips it when this build is mobileUI.
+	if (!Session.TouchTargeting) {
+		toggleTouchTargeting();
+	}
+
 	// Drop a skill dragged out of the Skill window onto an F1-F9 button to
 	// bind it there (capture phase so we read window._OBJ_DRAG_ before the
 	// SkillList's own touchend handler clears it).
@@ -791,6 +802,16 @@ function bindFKey(root, selector, keyCode) {
 	let sx = 0;
 	let sy = 0;
 	let candidate = false;
+	// Dedupe lock: without this, touchend firing keyPress() AND the browser's
+	// synthesised ~300ms-later click ALSO firing it sent every tap through
+	// twice (a real double-cast/duplicate target-selection per tap, worse on
+	// an actual double-tap). Same pattern as muiTap() above.
+	let lock = false;
+	const unlockSoon = () => {
+		setTimeout(() => {
+			lock = false;
+		}, 500);
+	};
 
 	el.addEventListener(
 		'touchstart',
@@ -815,15 +836,23 @@ function bindFKey(root, selector, keyCode) {
 	);
 	el.addEventListener('touchend', e => {
 		const quick = Date.now() - t0 < 500;
-		if (candidate && quick && !_fdrag.active && !_editMode) {
+		if (candidate && quick && !_fdrag.active && !_editMode && !lock) {
+			lock = true;
+			unlockSoon();
+			if (e.cancelable) {
+				e.preventDefault(); // suppress the ghost click for this tap
+			}
 			keyPress(keyCode);
 		}
 		candidate = false;
 		stopPropagation(e);
 	});
-	// mouse fallback (emulator / desktop)
+	// mouse fallback (emulator / desktop) - only fires for a real mouse click,
+	// never for the touch-synthesised one (that was just preventDefault'd above)
 	el.addEventListener('click', e => {
-		if (!_fdrag.active && !_editMode) {
+		if (!_fdrag.active && !_editMode && !lock) {
+			lock = true;
+			unlockSoon();
 			keyPress(keyCode);
 		}
 		stopPropagation(e);
