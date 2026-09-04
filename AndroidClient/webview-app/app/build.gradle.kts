@@ -190,7 +190,15 @@ fun diagOverlayJs(): String = """
         };
     });
     window.addEventListener('error', function (e) {
-        logbuf.push('!! ' + (e.message || 'error') + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno);
+        logbuf.push('!! ' + (e.message || 'error') + ' @ ' + (e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno);
+        try {
+            var st = e.error && e.error.stack;
+            if (st) {
+                String(st).split('\n').slice(0, 4).forEach(function (line) {
+                    logbuf.push('    ' + line.trim().slice(0, 160));
+                });
+            }
+        } catch (e2) {}
         if (logbuf.length > 40) { logbuf.shift(); }
     });
 

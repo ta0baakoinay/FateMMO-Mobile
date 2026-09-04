@@ -667,32 +667,47 @@ Navigation.loadMap = function loadMap(mapName, displayName) {
 		}
 	});
 
-	// Get the correct map path using DB.mapalias
-	let gatPath = mapBaseName + '.gat';
-	gatPath = gatPath.replace(/\//g, '\\');
-	gatPath = DB.mapalias[gatPath] || gatPath;
+	// loadMap() is always called with the player's actual current map (see
+	// onAppend() below), so the map loader has already fetched and parsed
+	// this exact GAT data into Altitude.js. Reuse it instead of re-downloading
+	// and re-parsing the whole .gat file over HTTP again on every map load.
+	if (Altitude.width && Altitude.height) {
+		const w = Altitude.width;
+		const h = Altitude.height;
+		const cellTypes = new Uint8Array(w * h);
 
-	// Load the GAT file for pathfinding
-	Client.loadFile('data/' + gatPath, gatData => {
-		if (gatData) {
-			if (gatData.cells && gatData.width && gatData.height) {
-				_mapData.width = gatData.width;
-				_mapData.height = gatData.height;
-				_mapData.cells = gatData.cells;
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				cellTypes[x + y * w] = Altitude.getCellType(x, y);
+			}
+		}
 
+		_mapData.width = w;
+		_mapData.height = h;
+		_mapData.cellTypes = cellTypes;
+		_mapData.map = mapBaseName;
+	} else {
+		// Fallback (shouldn't normally happen): Altitude not loaded yet, fetch directly.
+		let gatPath = mapBaseName + '.gat';
+		gatPath = gatPath.replace(/\//g, '\\');
+		gatPath = DB.mapalias[gatPath] || gatPath;
+
+		Client.loadFile('data/' + gatPath, gatData => {
+			if (gatData && gatData.cells && gatData.width && gatData.height) {
 				const cellCount = gatData.width * gatData.height;
 				const cellTypes = new Uint8Array(cellCount);
 
 				for (let i = 0; i < cellCount; i++) {
-					const cellIndex = i * 5 + 4;
-					cellTypes[i] = gatData.cells[cellIndex];
+					cellTypes[i] = gatData.cells[i * 5 + 4];
 				}
 
+				_mapData.width = gatData.width;
+				_mapData.height = gatData.height;
 				_mapData.cellTypes = cellTypes;
 				_mapData.map = mapBaseName;
 			}
-		}
-	});
+		});
+	}
 
 	this.setMapNameText(mapName);
 };
