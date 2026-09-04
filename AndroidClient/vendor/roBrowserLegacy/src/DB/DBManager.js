@@ -5094,7 +5094,19 @@ function loadItemInfo(filename, callback, onEnd) {
 				const ctx = lua.ctx;
 
 				// create itemInfo required functions in context
-				ctx.AddItem = (
+				//
+				// These are regular functions, not arrow functions, deliberately:
+				// wasmoon invokes registered Lua callbacks via `func.apply(thread, args)`
+				// (Vendors/wasmoon-lua5.1.js, registerFuncCallFunction), so `this` here
+				// is bound to the live Lua thread while its stack is still valid. Lua
+				// string arguments arrive in `args` already auto-decoded as UTF-8 by
+				// wasmoon (getValue()'s String case), which silently corrupts
+				// itemInfo.lub's actual encoding (CP949/Korean, per CLIENT_LANGTYPE) -
+				// that damage is irreversible by the time a JS string reaches here.
+				// this.getRawStringBytes(stackIndex) re-reads the same argument
+				// directly off the Lua stack as raw bytes (argument N is stack index
+				// N), which can then be decoded correctly instead.
+				ctx.AddItem = function (
 					ItemID,
 					unidentifiedDisplayName,
 					unidentifiedResourceName,
@@ -5102,13 +5114,13 @@ function loadItemInfo(filename, callback, onEnd) {
 					identifiedResourceName,
 					slotCount,
 					ClassNum
-				) => {
+				) {
 					ItemTable[ItemID] = {
 						...(typeof ItemTable[ItemID] === 'object' && ItemTable[ItemID]),
-						unidentifiedDisplayName: userStringDecoder.decode(unidentifiedDisplayName, userCharpage),
-						unidentifiedResourceName: userStringDecoder.decode(unidentifiedResourceName),
-						identifiedDisplayName: userStringDecoder.decode(identifiedDisplayName, userCharpage),
-						identifiedResourceName: userStringDecoder.decode(identifiedResourceName),
+						unidentifiedDisplayName: userStringDecoder.decode(this.getRawStringBytes(2), userCharpage),
+						unidentifiedResourceName: userStringDecoder.decode(this.getRawStringBytes(3)),
+						identifiedDisplayName: userStringDecoder.decode(this.getRawStringBytes(4), userCharpage),
+						identifiedResourceName: userStringDecoder.decode(this.getRawStringBytes(5)),
 						unidentifiedDescriptionName: [],
 						identifiedDescriptionName: [],
 						EffectID: null,
@@ -5119,12 +5131,12 @@ function loadItemInfo(filename, callback, onEnd) {
 					};
 					return 1;
 				};
-				ctx.AddItemUnidentifiedDesc = (ItemID, v) => {
-					ItemTable[ItemID].unidentifiedDescriptionName.push(userStringDecoder.decode(v, userCharpage));
+				ctx.AddItemUnidentifiedDesc = function (ItemID, v) {
+					ItemTable[ItemID].unidentifiedDescriptionName.push(userStringDecoder.decode(this.getRawStringBytes(2), userCharpage));
 					return 1;
 				};
-				ctx.AddItemIdentifiedDesc = (ItemID, v) => {
-					ItemTable[ItemID].identifiedDescriptionName.push(userStringDecoder.decode(v, userCharpage));
+				ctx.AddItemIdentifiedDesc = function (ItemID, v) {
+					ItemTable[ItemID].identifiedDescriptionName.push(userStringDecoder.decode(this.getRawStringBytes(2), userCharpage));
 					return 1;
 				};
 				ctx.AddItemEffectInfo = (ItemID, EffectID) => {

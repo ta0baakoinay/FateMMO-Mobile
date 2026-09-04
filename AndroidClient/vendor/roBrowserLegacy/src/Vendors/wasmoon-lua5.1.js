@@ -1294,6 +1294,35 @@ var exports = {};
 			this.pop();
 			return str;
 		}
+		/**
+		 * Read a Lua string value at the given stack index as raw bytes, bypassing
+		 * the auto-UTF8-decode that getValue()/lua_tolstring normally apply. Use
+		 * this for Lua string content that may not actually be UTF-8 (e.g. CP949/
+		 * Korean game data) - decode the returned bytes yourself with the correct
+		 * charset afterward. Must be called synchronously while the value is still
+		 * on the Lua stack (e.g. from inside a JS function Lua is currently
+		 * calling) - it does not pop or otherwise consume the stack value.
+		 *
+		 * @param {number} index Lua stack index (1-based, matching getValue())
+		 * @returns {Uint8Array|null} raw bytes, or null if not a string
+		 */
+		getRawStringBytes(index) {
+			index = this.luaApi.lua_absindex(this.address, index);
+			const lenPtr = this.luaApi.module._malloc(4);
+			try {
+				const strPtr = this.luaApi.lua_tolstring_ptr(this.address, index, lenPtr);
+				if (!strPtr) {
+					return null;
+				}
+				const len = this.luaApi.module.HEAPU32[lenPtr >> 2];
+				// Copy out of WASM memory - HEAPU8 is a live view that can be
+				// invalidated/reused, the caller needs an independent copy.
+				return this.luaApi.module.HEAPU8.slice(strPtr, strPtr + len);
+			}
+			finally {
+				this.luaApi.module._free(lenPtr);
+			}
+		}
 		dumpStack(log = console.log) {
 			const top = this.getTop();
 			for (let i = 1; i <= top; i++) {
@@ -1904,6 +1933,15 @@ var exports = {};
 			this.lua_tointeger = this.cwrap('lua_tointeger', 'number', ['number', 'number']);
 			this.lua_tolstring = this.cwrap('lua_tolstring', 'string', ['number', 'number', 'number']);
 			this.lua_tostring = (...args) => this.lua_tolstring(...args, null);
+			// Same underlying C function as lua_tolstring above, bound a second time
+			// with a 'number' return type instead of 'string' - Emscripten's cwrap
+			// auto-decodes 'string' returns as UTF-8 (via UTF8ToString), which
+			// silently corrupts non-UTF-8 (e.g. CP949/Korean) Lua string content.
+			// This variant returns the raw pointer instead, so callers can read the
+			// original bytes themselves. Calling cwrap twice for the same C export
+			// with different return-type interpretations is standard/safe - it just
+			// creates two independent JS wrappers around the same WASM function.
+			this.lua_tolstring_ptr = this.cwrap('lua_tolstring', 'number', ['number', 'number', 'number']);
 			this.lua_tonumber = this.cwrap('lua_tonumber', 'number', ['number', 'number']);
 			this.lua_topointer = this.cwrap('lua_topointer', 'number', ['number', 'number']);
 			this.lua_tothread = this.cwrap('lua_tothread', 'number', ['number', 'number']);
