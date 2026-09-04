@@ -107,6 +107,9 @@ val generateRoBrowserConfig by tasks.registering {
                 // read System/itemInfo*.lub for item names (the legacy
                 // idnum2itemdisplaynametable.txt in this GRF is mis-encoded)
                 loadLua: true,
+                // mobile GPU relief: render at 70% res, cap pixel ratio
+                quality: 70,
+                maxPixelRatio: 1.5,
                 autoLogin: ${if (env.getProperty("CLIENT_AUTOLOGIN")?.isNotBlank() == true) "[${env("CLIENT_AUTOLOGIN")}]" else "[]"},
                 remoteClient: "${env("CLIENT_REMOTE_CLIENT_URL")}",
                 servers: [{

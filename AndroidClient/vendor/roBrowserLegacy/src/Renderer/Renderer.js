@@ -281,7 +281,13 @@ class Renderer {
 		}
 
 		let width, height;
-		const dpr = window.devicePixelRatio || 1;
+		let dpr = window.devicePixelRatio || 1;
+
+		// Mobile GPUs in a WebView choke on a full-DPR backbuffer (a 2400px
+		// screen at dpr 3 = a 7200px canvas). Cap it.
+		if (typeof window !== 'undefined' && window.ROConfig && window.ROConfig.mobileUI === true) {
+			dpr = Math.min(dpr, window.ROConfig.maxPixelRatio || 1.5);
+		}
 
 		width = window.innerWidth || document.body.offsetWidth;
 		height = window.innerHeight || document.body.offsetHeight;
