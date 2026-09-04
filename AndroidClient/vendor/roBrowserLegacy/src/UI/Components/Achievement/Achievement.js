@@ -167,9 +167,22 @@ class AchievementComponent extends GUIComponent {
 	}
 
 	updateHeaderAndView() {
-		if (this._host.style.display === 'none') return;
+		if (!this._host || this._host.style.display === 'none') return;
 
 		const root = this.getRoot();
+		if (!root) return;
+
+		// A rank/achievement packet can arrive during the very first login,
+		// before Achievement.append()/prepare() has ever run (its HTML isn't
+		// in the shadow root yet). Every querySelector below throws on null
+		// otherwise - and since this runs from a network packet handler, an
+		// uncaught throw here has been silently aborting whatever else was
+		// queued in that same callback (map entry finalisation included).
+		// Use one canary element: if it's missing, nothing else is rendered
+		// yet either, so there's nothing to update.
+		const rankProgressFill = root.querySelector('.js-rank-progress-fill');
+		if (!rankProgressFill) return;
+
 		const ach = Session.Achievement || { rank: 0, total_points: 0, list: {} };
 
 		root.querySelector('.js-rank').textContent = ach.rank;
@@ -180,9 +193,10 @@ class AchievementComponent extends GUIComponent {
 		const ratio = nextPoints > 0 ? Math.min(100, (currentPoints / nextPoints) * 100) : currentPoints > 0 ? 100 : 0;
 
 		root.querySelector('.js-rank-progress-text').textContent = `${currentPoints}/${nextPoints}`;
-		root.querySelector('.js-rank-progress-fill').style.width = `${ratio}%`;
+		rankProgressFill.style.width = `${ratio}%`;
 
 		const catProgressEl = root.querySelector('.js-cat-progress');
+		if (!catProgressEl) return;
 		if (this.currentMajor === 0) {
 			catProgressEl.style.display = 'none';
 			this.renderOverview();
