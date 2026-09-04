@@ -50,6 +50,129 @@ const _available = !!(self.requestFileSystemSync || self.webkitRequestFileSystem
 let _save = false;
 
 /**
+ * Persistent asset cache (IndexedDB).
+ *
+ * _available above gates the legacy requestFileSystemSync/webkitRequestFileSystemSync
+ * API, which Chromium removed years ago - it's false on any modern WebView, which
+ * silently turned saveFile()/getFile() into permanent no-ops (nothing was ever
+ * actually cached, regardless of "Download Everything" or how many times a map
+ * had already been visited). IndexedDB replaces it as the real persistent store:
+ * available in Workers, supported on every Android WebView version this project
+ * targets, and treated by the platform as durable site data rather than
+ * disposable HTTP cache. Unconditional - not gated behind `_save` (that flag is
+ * tied to a separate, unrelated desktop "save a dragged-in full client" feature
+ * that's never enabled on this deployment) - caching every remote-fetched asset
+ * is core behavior here, not an opt-in.
+ */
+const IDB_NAME = 'fatemmo-assets';
+const IDB_STORE = 'files';
+const IDB_VERSION = 1;
+let _dbOpenPromise = null;
+
+function openIdb() {
+	if (_dbOpenPromise) {
+		return _dbOpenPromise;
+	}
+
+	_dbOpenPromise = new Promise(resolve => {
+		if (typeof indexedDB === 'undefined') {
+			resolve(null);
+			return;
+		}
+
+		const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+
+		req.onupgradeneeded = () => {
+			if (!req.result.objectStoreNames.contains(IDB_STORE)) {
+				req.result.createObjectStore(IDB_STORE, { keyPath: 'path' });
+			}
+		};
+
+		req.onsuccess = () => {
+			// Best-effort request that the platform treat this origin's storage as
+			// persistent (non-evictable under storage pressure) rather than
+			// disposable cache. Not supported everywhere, and even where supported
+			// it's advisory - fine either way, this is purely additive.
+			try {
+				if (self.navigator && self.navigator.storage && self.navigator.storage.persist) {
+					self.navigator.storage.persist().catch(() => {});
+				}
+			} catch (e) {
+				/* ignore */
+			}
+			resolve(req.result);
+		};
+
+		req.onerror = () => resolve(null);
+	});
+
+	return _dbOpenPromise;
+}
+
+/**
+ * Look up a file in the persistent IndexedDB cache.
+ *
+ * @param {string} filename normalized (forward-slash) path
+ * @param {function} onload receives a Blob, matching the shape callers already
+ *   expect from the legacy fileEntry.file(onload) API
+ * @param {function} onerror called with no args, same as the legacy API
+ */
+function getFromIdb(filename, onload, onerror) {
+	openIdb().then(db => {
+		if (!db) {
+			onerror();
+			return;
+		}
+
+		try {
+			const tx = db.transaction(IDB_STORE, 'readonly');
+			const req = tx.objectStore(IDB_STORE).get(filename);
+
+			req.onsuccess = () => {
+				const record = req.result;
+				// Verify the stored blob's actual size matches what was recorded at
+				// save time - catches a corrupted/partial write without needing to
+				// hash every asset (fetch() itself already guarantees a response
+				// body is delivered complete or rejected, so this only needs to
+				// catch on-disk corruption, not network truncation).
+				if (record && record.data && record.data.size === record.size) {
+					console.log('%c[CACHE] hit ' + filename, 'color:#2a9d3a');
+					onload(record.data);
+				} else {
+					onerror();
+				}
+			};
+
+			req.onerror = () => onerror();
+		} catch (e) {
+			onerror();
+		}
+	});
+}
+
+/**
+ * Persist a file to the IndexedDB cache.
+ *
+ * @param {string} filename normalized (forward-slash) path
+ * @param {Blob} blob
+ */
+function saveToIdb(filename, blob) {
+	openIdb().then(db => {
+		if (!db) {
+			return;
+		}
+
+		try {
+			const tx = db.transaction(IDB_STORE, 'readwrite');
+			tx.objectStore(IDB_STORE).put({ path: filename, size: blob.size, data: blob, savedAt: Date.now() });
+		} catch (e) {
+			// Storage full or unavailable - not fatal, this asset just won't be
+			// cached and will be re-fetched next time it's needed.
+		}
+	});
+}
+
+/**
  * Normalize file path
  *
  * @param {array} FileList
@@ -297,7 +420,9 @@ class FileSystem {
 	static getFile(filename, onload, onerror) {
 		filename = filename.replace(/\\/g, '/');
 
-		if (!_available || _files.length) {
+		// Legacy dragged-in-client file list (desktop "save full client" feature -
+		// normally empty on this deployment, kept for parity).
+		if (_files.length) {
 			let i;
 			const count = _files.length;
 
@@ -308,23 +433,27 @@ class FileSystem {
 					return;
 				}
 			}
+		}
 
-			onerror();
+		// Legacy native FileSystem API - removed from modern Chromium, _available
+		// will be false in practice, kept in case it's ever true again somewhere.
+		if (_available) {
+			_fs.root.getFile(
+				filename,
+				{ create: false },
+				fileEntry => {
+					if (fileEntry.isFile) {
+						fileEntry.file(onload);
+					} else {
+						getFromIdb(filename, onload, onerror);
+					}
+				},
+				() => getFromIdb(filename, onload, onerror)
+			);
 			return;
 		}
 
-		_fs.root.getFile(
-			filename,
-			{ create: false },
-			fileEntry => {
-				if (fileEntry.isFile) {
-					fileEntry.file(onload);
-				} else {
-					onerror();
-				}
-			},
-			onerror
-		);
+		getFromIdb(filename, onload, onerror);
 	}
 
 	/**
@@ -335,24 +464,28 @@ class FileSystem {
 	 * @param {ArrayBuffer} buffer
 	 */
 	static saveFile(filePath, buffer) {
-		if (!_save || !_available) {
-			return;
-		}
-
 		const filename = filePath.replace(/\\/g, '/');
-		const directories = filename.split('/').slice(0, -1);
-		let path = '';
+		const blob = buffer instanceof Blob ? buffer : new Blob([buffer]);
 
-		// Create hierarchy
-		while (directories.length) {
-			path += directories.shift() + '/';
-			_fs_sync.root.getDirectory(path, { create: true });
+		// Legacy native FileSystem API path (desktop "save full client" feature) -
+		// inert in practice since _available is false on modern Chromium.
+		if (_save && _available) {
+			const directories = filename.split('/').slice(0, -1);
+			let path = '';
+
+			while (directories.length) {
+				path += directories.shift() + '/';
+				_fs_sync.root.getDirectory(path, { create: true });
+			}
+
+			const fileEntry = _fs_sync.root.getFile(filename, { create: true });
+			const writer = fileEntry.createWriter();
+
+			writer.write(blob);
 		}
 
-		const fileEntry = _fs_sync.root.getFile(filename, { create: true });
-		const writer = fileEntry.createWriter();
-
-		writer.write(new Blob([buffer]));
+		// The real persistence mechanism on this deployment - always on.
+		saveToIdb(filename, blob);
 	}
 
 	/**
@@ -436,6 +569,11 @@ class FileSystem {
 	 */
 	static init(files, save, quota) {
 		_files = normalizeFilesPath(files);
+		_save = !!save;
+
+		// Kick off the IndexedDB connection early so it's ready by the time the
+		// first getFile()/saveFile() call comes in.
+		openIdb();
 
 		if (!_available) {
 			trigger('onready');
@@ -462,7 +600,6 @@ class FileSystem {
 					processUpload(0);
 				}
 
-				_save = save;
 				trigger('onready');
 			},
 			errorHandler

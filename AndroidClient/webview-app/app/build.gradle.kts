@@ -422,6 +422,43 @@ fun prefetchBootstrapJs(): String = """
             });
     }
 
+    // Same IndexedDB store Core/FileSystem.js reads from inside the worker
+    // (see that file for why: the legacy requestFileSystemSync API it used to
+    // rely on doesn't exist in modern WebView, so nothing was ever actually
+    // persisted before - this "download everything" flow used to just warm
+    // the browser's own disposable HTTP cache and throw the bytes away).
+    // Writing into the same DB/store/key format here means anything fetched
+    // by this prefetch is immediately available to normal gameplay with zero
+    // network activity, and vice versa.
+    var IDB_NAME = 'fatemmo-assets', IDB_STORE = 'files', IDB_VERSION = 1;
+    var idbPromise = null;
+    function openIdb() {
+        if (idbPromise) { return idbPromise; }
+        idbPromise = new Promise(function (resolve) {
+            if (typeof indexedDB === 'undefined') { resolve(null); return; }
+            var req = indexedDB.open(IDB_NAME, IDB_VERSION);
+            req.onupgradeneeded = function () {
+                if (!req.result.objectStoreNames.contains(IDB_STORE)) {
+                    req.result.createObjectStore(IDB_STORE, { keyPath: 'path' });
+                }
+            };
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { resolve(null); };
+        });
+        return idbPromise;
+    }
+    function cacheFile(path, buffer) {
+        if (!buffer) { return; }
+        var blob = new Blob([buffer]);
+        openIdb().then(function (db) {
+            if (!db) { return; }
+            try {
+                var tx = db.transaction(IDB_STORE, 'readwrite');
+                tx.objectStore(IDB_STORE).put({ path: path, size: blob.size, data: blob, savedAt: Date.now() });
+            } catch (e) {}
+        });
+    }
+
     function run(list) {
         var total = list.length, done = 0, idx = 0, CONC = 6;
         var bar = document.getElementById('fmp-bar');
@@ -438,8 +475,10 @@ fun prefetchBootstrapJs(): String = """
             if (pool.stop) { return; }
             if (idx >= list.length) { return; }
             var p = list[idx++];
+            var path = 'data/' + p; // matches the internal filename convention Core/FileManager.js uses
             fetch(BASE + '/data/' + enc(p), { mode: 'cors', cache: 'force-cache' })
                 .then(function (r) { return r && r.arrayBuffer ? r.arrayBuffer() : null; })
+                .then(function (buf) { cacheFile(path, buf); })
                 .catch(function () {})
                 .then(function () { tick(); next(); });
         }
