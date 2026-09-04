@@ -287,10 +287,12 @@ fun diagOverlayJs(): String = """
 
 /**
  * Appended to the generated Config.local.js. A standalone, framework-free
- * "Download game data now / later" prompt (RagnaFinest-style) that pre-warms
- * the WebView HTTP cache from the Remote Client's /data/manifest.txt so later
- * map loads are cache hits. Independent of the roBrowser build so a web
- * rebuild never drops it.
+ * "Download game data now / later" prompt (RagnaFinest-style) that fetches
+ * everything listed in the Remote Client's /data/manifest.txt and writes it
+ * into the same persistent IndexedDB store Core/FileSystem.js reads from -
+ * see that file for why this used to just warm the WebView's disposable HTTP
+ * cache and throw the bytes away instead of actually persisting anything.
+ * Independent of the roBrowser build so a web rebuild never drops it.
  */
 fun prefetchBootstrapJs(): String = """
 /* ---- Fate MMO asset prefetch (auto-generated) ---- */
@@ -302,7 +304,21 @@ fun prefetchBootstrapJs(): String = """
     var DONE = 'fatemmo.assets.done.v1';
     var LATER = 'fatemmo.assets.later.v1';
     var LATER_MS = 12 * 3600 * 1000;
+    var MIGRATED = 'fatemmo.assets.idbMigrated.v1';
     try {
+        // One-time reset: a "download complete" flag saved by any build before
+        // this one is stale - Core/FileSystem.js's persistent cache didn't
+        // exist yet at that point (it silently discarded every fetched file,
+        // see that file for why), so nothing from a prior "Download Everything"
+        // run was ever actually saved anywhere durable. Clear the flag exactly
+        // once so the prompt reappears and a real download can happen; guarded
+        // so this never fires again once it has (won't re-prompt after a
+        // genuine download completes on this build or any later one).
+        if (!localStorage.getItem(MIGRATED)) {
+            localStorage.removeItem(DONE);
+            localStorage.removeItem(LATER);
+            localStorage.setItem(MIGRATED, '1');
+        }
         if (localStorage.getItem(DONE)) { return; }
         var t = parseInt(localStorage.getItem(LATER) || '0', 10);
         if (t && (Date.now() - t) < LATER_MS) { return; }
