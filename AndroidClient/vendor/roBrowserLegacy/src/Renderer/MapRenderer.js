@@ -352,10 +352,22 @@ function onProgressUpdate(percent) {
 	Background.setPercent(percent);
 }
 
+// main-thread map-completion phase timing (shows in the on-screen diag)
+const _mmNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+let _mmMark = 0;
+function _mm(name) {
+	const t = _mmNow();
+	if (_mmMark) {
+		console.log('[MAPMAIN] ' + name + ' ' + Math.round(t - _mmMark) + 'ms');
+	}
+	_mmMark = t;
+}
+
 /**
  * Received parsed world
  */
 function onWorldComplete(data) {
+	_mm('worldComplete');
 	this.light = data.light;
 	this.water = data.water;
 	this.sounds = data.sound;
@@ -390,6 +402,7 @@ function onWorldComplete(data) {
  * Received ground data from Thread
  */
 function onGroundComplete(data) {
+	_mm('groundComplete (Ground/Water.init)');
 	const gl = Renderer.getContext();
 
 	this.water.mesh = data.waterMesh;
@@ -431,6 +444,7 @@ function onGroundComplete(data) {
  * Receiving parsed GAT from Thread
  */
 function onAltitudeComplete(data) {
+	_mm('altitudeComplete');
 	const gl = Renderer.getContext();
 	Altitude.init(data);
 	GridSelector.init(gl);
@@ -440,13 +454,16 @@ function onAltitudeComplete(data) {
  * Receiving parsed RSMs from Thread
  */
 function onModelsComplete(data) {
+	_mm('modelsComplete -> Models.init start');
 	Models.init(Renderer.getContext(), data);
+	_mm('Models.init done');
 }
 
 /**
  * Receiving animated RSM model from Thread
  */
 function onAnimatedModelComplete(data) {
+	_mm('animatedModelComplete');
 	const gl = Renderer.getContext();
 	AnimatedModels.add(gl, data);
 }
@@ -476,6 +493,7 @@ function registerPostProcessModules(gl) {
  * Once the map finished to load
  */
 function onMapComplete(success, error) {
+	_mm('onMapComplete <-');
 	const worldResource = this.currentMap.replace(/\.gat$/i, '.rsw');
 	const mapInfo = DB.getMap(worldResource);
 
@@ -498,19 +516,24 @@ function onMapComplete(success, error) {
 	}
 
 	// Initialize renderers
+	_mm('onMapComplete: BGM/fog done, pre Renderer.init');
 	Renderer.init();
 	const gl = Renderer.getContext();
+	_mm('Renderer.init');
 
 	SpriteRenderer.init(gl);
 	Sky.init(gl, worldResource);
 	Damage.init(gl);
 	EffectManager.init(gl);
 	ScreenEffectManager.init(gl, worldResource);
+	_mm('Sprite/Sky/Damage/Effect/ScreenEffect init');
 	registerPostProcessModules(gl);
+	_mm('registerPostProcessModules (post-fx shaders)');
 	JoystickUI.onRestore();
 
 	// Starting to render
 	Background.remove(() => {
+		_mm('Background.remove cb (fade done)');
 		MapRenderer.loading = false;
 
 		MapRenderer.onLoad();
