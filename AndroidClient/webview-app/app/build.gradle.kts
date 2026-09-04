@@ -91,6 +91,16 @@ val generateRoBrowserConfig by tasks.registering {
     inputs.file(envFile)
     outputs.dir(outDir)
     doLast {
+        // Debug instrumentation (on-screen diag overlay + verbose network
+        // console logging) is OFF by default now that the two real load-time
+        // bugs are fixed - both were themselves "excessive logging/debug
+        // operation" costs (an exception flood, and every packet logged to
+        // Android logcat via WebChromeClient). Flip CLIENT_DEBUG_DIAG=true
+        // in client.env.properties to bring the on-screen readout back for
+        // future investigation - the code stays, it's just not shipped by
+        // default.
+        val debugDiag = env.getProperty("CLIENT_DEBUG_DIAG")?.trim()?.equals("true", ignoreCase = true) == true
+
         val f = outDir.get().file("Config.local.js").asFile
         f.parentFile.mkdirs()
         f.writeText(
@@ -98,15 +108,12 @@ val generateRoBrowserConfig by tasks.registering {
             /* AUTO-GENERATED from client.env.properties — do not edit by hand. */
             window.ROConfigLocal = {
                 development: false,
-                enableConsole: true,
+                enableConsole: $debugDiag,
                 skipIntro: true,
                 skipServerList: true,
                 forceUseAddress: true,
                 mobileUI: true,
                 loadingFallbackImage: "bg_loading.jpg",
-                // mobile GPU relief: render at 70% res, cap pixel ratio
-                quality: 70,
-                maxPixelRatio: 1.5,
                 autoLogin: ${if (env.getProperty("CLIENT_AUTOLOGIN")?.isNotBlank() == true) "[${env("CLIENT_AUTOLOGIN")}]" else "[]"},
                 remoteClient: "${env("CLIENT_REMOTE_CLIENT_URL")}",
                 servers: [{
@@ -123,9 +130,9 @@ val generateRoBrowserConfig by tasks.registering {
                     forceUseAddress: true
                 }]
             };
-            """.trimIndent() + "\n" + prefetchBootstrapJs() + "\n" + diagOverlayJs()
+            """.trimIndent() + "\n" + prefetchBootstrapJs() + (if (debugDiag) "\n" + diagOverlayJs() else "")
         )
-        logger.lifecycle("Wrote ${f.absolutePath}")
+        logger.lifecycle("Wrote ${f.absolutePath} (debugDiag=$debugDiag)")
     }
 }
 

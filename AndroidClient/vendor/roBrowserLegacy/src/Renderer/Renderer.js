@@ -283,10 +283,13 @@ class Renderer {
 		let width, height;
 		let dpr = window.devicePixelRatio || 1;
 
-		// Mobile GPUs in a WebView choke on a full-DPR backbuffer (a 2400px
-		// screen at dpr 3 = a 7200px canvas). Cap it.
-		if (typeof window !== 'undefined' && window.ROConfig && window.ROConfig.mobileUI === true) {
-			dpr = Math.min(dpr, window.ROConfig.maxPixelRatio || 1.5);
+		// Optional mobile GPU relief: cap the backbuffer's device-pixel-ratio.
+		// Off by default (full resolution) - the profiling that motivated this
+		// (v0.1.12) turned out to be chasing the wrong bottleneck (the real
+		// costs were an exception flood and GRF cache misses, both fixed).
+		// Only applies if a build explicitly sets ROConfig.maxPixelRatio.
+		if (typeof window !== 'undefined' && window.ROConfig && window.ROConfig.maxPixelRatio) {
+			dpr = Math.min(dpr, window.ROConfig.maxPixelRatio);
 		}
 
 		width = window.innerWidth || document.body.offsetWidth;
