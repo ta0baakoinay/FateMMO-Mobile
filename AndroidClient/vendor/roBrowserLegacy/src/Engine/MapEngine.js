@@ -654,7 +654,9 @@ function onConnectionRefused(pkt) {
  * @param {object} pkt - PACKET.ZC.NPCACK_MAPMOVE
  */
 function onMapChange(pkt) {
+	console.log('[WARP] onMapChange recv: map=' + pkt.mapName + ' dest=[' + pkt.xPos + ',' + pkt.yPos + '] currentMap=' + MapRenderer.currentMap);
 	MapRenderer.onLoad = () => {
+		console.log('[WARP] onLoad fired, repositioning entity to [' + pkt.xPos + ',' + pkt.yPos + ']');
 		Session.Entity.set({
 			PosDir: [pkt.xPos, pkt.yPos, 0],
 			// Use Session.AID rather than Session.Entity.GID here:
@@ -665,6 +667,7 @@ function onMapChange(pkt) {
 			// map server and is never mutated by entity cleanup.
 			GID: Session.AID
 		});
+		console.log('[WARP] entity.position after set: [' + Session.Entity.position[0] + ',' + Session.Entity.position[1] + '] GID=' + Session.Entity.GID);
 		EntityManager.add(Session.Entity);
 		if (Session.Entity.effectState & StatusConst.EffectState.FALCON) {
 			if (!Session.Entity.falcon) {
@@ -721,6 +724,7 @@ function onMapChange(pkt) {
 		// Initialize camera
 		Camera.setTarget(Session.Entity);
 		Camera.init();
+		console.log('[WARP] camera target set, entity in EntityManager: ' + !!EntityManager.get(Session.Entity.GID));
 
 		// Add Game UI
 		MiniMap.getUI().append();

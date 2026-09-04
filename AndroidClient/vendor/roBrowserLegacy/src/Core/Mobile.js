@@ -290,7 +290,15 @@ if (Math.max(screen.availHeight, screen.availWidth) <= 800) {
 function touchDevice() {
 	Session.isTouchDevice = true;
 
-	if (Session.Playing) {
+	// Session.Playing can already be true while the map is still loading (it's
+	// set right after the connection is accepted, well before MobileUI.append()
+	// ever runs - append() only happens once the whole map finishes loading).
+	// MobileUI.show() dereferences this._host, which doesn't exist until the
+	// component has been prepared at least once, so calling it here during
+	// that window throws. If it's not ready yet, just leave isTouchDevice set:
+	// MobileUI.onAppend() already checks it and shows the UI correctly once
+	// the component is actually prepared.
+	if (Session.Playing && MobileUI._host) {
 		//Already playing, don't wait for map change, just show it
 		MobileUI.show();
 	}

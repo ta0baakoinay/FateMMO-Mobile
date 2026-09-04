@@ -145,6 +145,7 @@ class MapRenderer {
 		const newMap = stripMapExtension(mapname);
 
 		// Don't reload a map when it's just a local teleportation
+		console.log('[WARP] setMap: oldMap=' + oldMap + ' newMap=' + newMap + ' -> ' + (oldMap !== newMap ? 'FULL RELOAD' : 'local teleport (fast path)'));
 		if (oldMap !== newMap) {
 			this.loading = true;
 			BGM.stop();
