@@ -46,14 +46,17 @@
 	top: 3px;
 	left: 86px;
 	width: 185px;
-	height: 14px;
+	height: 16px;
 	padding-left: 4px;
 	padding-top: 6px;
-	text-shadow: 1px 1px 0px white;
+	text-shadow:
+		0 1px 2px rgba(255, 255, 255, 0.9),
+		0 0 4px rgba(255, 255, 255, 0.6);
 	white-space: nowrap;
 	overflow: hidden;
-	font-size: 11px;
+	font-size: 13px;
 	font-weight: bold;
+	color: #1a1a1a;
 }
 .ItemInfo .close {
 	position: absolute;
@@ -70,14 +73,25 @@
 	position: absolute;
 	top: 35px;
 	left: 100px;
-	line-height: 18px;
-	width: 170px;
-	height: 75px;
+	line-height: 20px;
+	width: 172px;
+	height: 80px;
 	overflow-y: auto;
+	font-size: 12px;
+	color: #1a1a1a;
+	/* A soft, translucent backing directly behind the text only - keeps the
+	   panel's own background/skin fully visible everywhere else, but gives
+	   text a consistent, readable surface regardless of what shows through
+	   behind it (game world, bright textures, etc.). Not a solid fill. */
+	background: rgba(255, 255, 255, 0.38);
+	border-radius: 4px;
+	padding: 2px 4px;
+	box-sizing: border-box;
 }
 .ItemInfo .description .description-inner {
-	width: 150px;
+	width: 100%;
 	white-space: pre-wrap;
+	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.7);
 }
 .ItemInfo .extend {
 	position: absolute;
