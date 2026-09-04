@@ -78,7 +78,7 @@ class Client {
 	 */
 	static getFile(filename, onload, onerror, args) {
 		if (!Memory.exist(filename)) {
-			Thread.send('GET_FILE', { filename, args: args || null }, onFileGetted);
+			sendFileRequest('GET_FILE', filename, args, onFileGetted);
 		}
 
 		return Memory.get(filename, onload, onerror);
@@ -123,7 +123,7 @@ class Client {
 	 */
 	static loadFile(filename, onload, onerror, args = {}) {
 		if (!Memory.exist(filename)) {
-			Thread.send('LOAD_FILE', { filename, args: args || null }, onFileLoaded);
+			sendFileRequest('LOAD_FILE', filename, args, onFileLoaded);
 		}
 
 		return Memory.get(filename, onload, onerror);
@@ -275,6 +275,53 @@ function savingFiles(files) {
 			},
 			(...args) => Client.onFilesLoaded(...args)
 		);
+	});
+}
+
+/**
+ * How long to wait for a worker file request before treating it as failed.
+ *
+ * Thread.send()'s callback only fires when the worker actually replies -
+ * there's no timeout anywhere in that path. If a request goes out while the
+ * network/server is unreachable (a real outage, not hypothetical - this hung
+ * the client indefinitely on the very first boot-time file load, with zero
+ * error and zero recovery, and stayed stuck even after the server came back
+ * up because the original request was long gone), the caller's onload/
+ * onerror simply never fires and whatever was waiting on it - in the worst
+ * case, the whole app boot sequence - is stuck forever with no way out.
+ *
+ * Scoped to Client.js's own GET_FILE/LOAD_FILE requests only (individual
+ * game asset files - fonts, tables, textures, sprites), not the worker's
+ * separate map-loading path (Loaders/MapLoader.js via Core/FileManager.js),
+ * which can legitimately take a long time on a slow/uncached map and must
+ * not be subject to this.
+ */
+const FILE_REQUEST_TIMEOUT_MS = 30000;
+
+function sendFileRequest(type, filename, args, handler) {
+	let settled = false;
+
+	const timeoutId = setTimeout(() => {
+		if (settled) {
+			return;
+		}
+		settled = true;
+		console.error(
+			'[Client] "' + filename + '" did not load within ' + FILE_REQUEST_TIMEOUT_MS / 1000 + 's, treating as failed.'
+		);
+		Memory.set(filename, null, 'timeout');
+	}, FILE_REQUEST_TIMEOUT_MS);
+
+	Thread.send(type, { filename, args: args || null }, (...callbackArgs) => {
+		if (settled) {
+			// Timeout already reported this as failed; a very late real
+			// response isn't useful anymore, and any callbacks waiting on
+			// it have already been cleared by Memory.set() above.
+			return;
+		}
+		settled = true;
+		clearTimeout(timeoutId);
+		handler(...callbackArgs);
 	});
 }
 
