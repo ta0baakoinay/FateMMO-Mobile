@@ -219,12 +219,22 @@ class MapEngine {
 				// mobile networks where outbound sends keep "succeeding" into a dead
 				// socket while nothing comes back), the server-side stall_time timeout
 				// is the only thing that would eventually notice, which can take
-				// minutes. Detect it client-side instead: after several consecutive
-				// unanswered pings (30s of confirmed silence), force the socket closed
+				// minutes. Detect it client-side instead and force the socket closed
 				// so the existing disconnect handling (NetworkManager's onClose ->
-				// "Disconnected from Server" box) kicks in immediately instead of the
-				// game sitting there indefinitely.
-				let missedPings = 0;
+				// "Disconnected from Server" box) kicks in quickly instead of the game
+				// sitting there indefinitely.
+				//
+				// Measured by real elapsed time since the last confirmed pong, NOT a
+				// fixed count of missed 10s ticks: a legitimate heavy map load (model/
+				// texture parsing on the main thread) has been measured taking 40+
+				// seconds by itself, during which the ping timer can still fire but the
+				// pong response sits unprocessed until the main thread frees up - a
+				// tick-count-based check mistook that for a dead connection and was
+				// disconnecting players mid-load. 60s gives comfortable margin above the
+				// worst load time measured so far while still being far faster than
+				// waiting on server stall_time.
+				let lastPongAt = Date.now();
+				const DEAD_CONNECTION_MS = 60000;
 				Network.setPing(() => {
 					if (is_sec_hbt) {
 						Network.sendPacket(hbt);
@@ -232,16 +242,16 @@ class MapEngine {
 
 					ping.clientTime = Date.now() - startTick;
 
-					if (!SP.returned && SP.pingTime) {
-						missedPings++;
-						console.warn('[Network] The server did not answer the previous PING! (' + missedPings + ' in a row)');
-						if (missedPings >= 3) {
-							console.error('[Network] Connection appears dead (' + missedPings + ' consecutive missed pings), forcing disconnect.');
+					if (SP.returned) {
+						lastPongAt = Date.now();
+					} else if (SP.pingTime) {
+						const silentFor = Date.now() - lastPongAt;
+						console.warn('[Network] The server did not answer the previous PING! (silent for ' + Math.round(silentFor / 1000) + 's)');
+						if (silentFor >= DEAD_CONNECTION_MS) {
+							console.error('[Network] Connection appears dead (' + Math.round(silentFor / 1000) + 's with no response), forcing disconnect.');
 							Network.close();
 							return;
 						}
-					} else {
-						missedPings = 0;
 					}
 					SP.pingTime = ping.clientTime;
 					SP.returned = false;
