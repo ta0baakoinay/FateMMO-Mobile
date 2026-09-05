@@ -247,8 +247,22 @@ const langType = servers[0] && servers[0].langtype ? parseInt(servers[0].langtyp
 
 // setup default encoding
 const userCharpage = TextEncoding.detectEncodingByLangtype(langType, Configs.get('disableKorean'));
-const grfCharpage = 'windows-1252';
-TextEncoding.setCharset(grfCharpage);
+// This used to hardcode the GLOBAL default decode charset to 'windows-1252'
+// regardless of the server's actual language (userCharpage, correctly
+// detected as 'windows-949'/CP949 for this Korean-langtype-0 deployment,
+// sat right above unused). TextEncoding.decode()'s charset parameter is
+// optional almost everywhere it's called in this file (40+ call sites -
+// map names, NPC data, quest data, item random options, and critically
+// ctx.AddSkillInfo's `Name` field, the skill icon's resource filename) -
+// every one of those omitted-charset calls silently fell back to this
+// wrong default. Root cause of skill hotbar icons all looking the same
+// "duplicated" generic icon: garbled/wrong resource filenames (decoded as
+// Latin-1 instead of CP949) landing on the RemoteClient server's Korean-
+// filename path-mapping fallback instead of each skill's real icon.
+// Safe to fix at this single point: ASCII bytes (the common case for
+// internal keys/map names) decode identically under both encodings, so
+// this can only correct the non-ASCII cases, not break the ASCII ones.
+TextEncoding.setCharset(userCharpage);
 
 // create decoders
 const userStringDecoder = TextEncoding;
