@@ -30,20 +30,41 @@ input,
 textarea,
 select {
 	touch-action: manipulation;
-	/* Chromium's UA stylesheet resolves an input's own `color` from the
-	   system light/dark scheme (not inherited from ancestors), independent
-	   of whatever this component's own CSS declares on its container - most
-	   components here never set `color` on their <input> at all (WinLogin,
-	   Storage search, Vending, Guild/Clan name fields, InputBox, etc.), so
-	   typed text can render black-on-black-ish against this project's dark
-	   glass panels/GRF art depending on the device's light/dark setting,
-	   looking like nothing is being typed. Same failure class already fixed
-	   once for item name/quantity text (ItemInfo.css/InventoryV2.css) - same
-	   fix here: force a visible fill + an outline that holds up regardless
-	   of what's actually behind the field. Any component with its own
-	   explicit `color`/`text-shadow` on `input` (e.g. ChatBox) overrides
-	   this via normal CSS specificity/source order - this is only the
-	   fallback for everything that never set one. */
+}
+
+/* Two unrelated causes of "can't see what I'm typing", fixed together here
+   since both land on the same visible symptom (typed text rendering the
+   same color as the background it sits on):
+   1) Chromium's UA stylesheet resolves a real <input>'s own `color` from
+      the system light/dark scheme, NOT by inheriting from ancestors -
+      independent of whatever this component's own CSS declares on its
+      container. Most real <input> fields here never set `color` at all
+      (WinLogin, Storage search, Vending, Guild/Clan name fields,
+      InputBox, etc.), so typed text can render black-on-black-ish
+      against this project's dark glass panels/GRF art depending on the
+      device's light/dark setting.
+   2) ChatBox/WhisperBox don't actually use an <input> for the typed
+      message at all - confirmed in their .html templates, it's a
+      `contenteditable="true"` <div class="message">. A contenteditable
+      div DOES inherit `color` normally (no special UA override like
+      #1), but nothing here - not this file's `body`, not ChatBox.css's
+      base `.message` rule (only its .party/.guild/.clan channel variants
+      set a color) - ever declares one, so it falls back to the browser's
+      plain black initial value, invisible against the dark chat input
+      bar. This is why the earlier fix here (scoped to input/textarea/
+      select) had no effect on chat: a contenteditable div is none of
+      those elements.
+   Fixed once, in both cases, with the same white-fill + dark-outline
+   technique already proven in this project for item name/quantity text
+   over arbitrary GRF art (ItemInfo.css/InventoryV2.css) - holds up
+   regardless of what's actually rendered behind the field. Any component
+   with its own explicit `color`/`text-shadow` on a matching element
+   overrides this via normal CSS specificity/source order; this is only
+   the fallback for everything that never set one. */
+input,
+textarea,
+select,
+[contenteditable] {
 	color: #fff;
 	caret-color: #fff;
 	text-shadow:

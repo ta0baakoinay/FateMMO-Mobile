@@ -5215,10 +5215,21 @@ function loadItemInfo(filename, callback, onEnd) {
 				// on my tests dont care if the main() is on itemInfo.lub or itemInfo_f.lub the content is always the same
 				lua.doStringSync(`
 						function main_item()
-							_processedItems = _processedItems or {} 
+							-- Local, not the old "_processedItems = _processedItems or {}"
+							-- global: that persisted across separate loadItemInfo() calls
+							-- sharing this same Lua VM (main_item() only ever runs once
+							-- per call anyway, so the old global gave it no real within-
+							-- call purpose). With a persistent global, loading a second
+							-- file here (e.g. an English translation overlay after the
+							-- Korean base) found every item ID already marked processed
+							-- by the first call and silently skipped re-adding ALL of
+							-- them - the overlay's data loaded fine but never reached
+							-- AddItem. Scoping it per call fixes that while leaving
+							-- single-call (Korean-only) behavior unchanged.
+							local _processedItems = {}
 							for ItemID, DESC in pairs(tbl) do
 								if not _processedItems[ItemID] and #DESC.identifiedDescriptionName > 0 then
-									_processedItems[ItemID] = true 
+									_processedItems[ItemID] = true
 									result, msg = AddItem(ItemID, DESC.unidentifiedDisplayName, DESC.unidentifiedResourceName, DESC.identifiedDisplayName, DESC.identifiedResourceName, DESC.slotCount, DESC.ClassNum)
 									if not result then
 										return false, msg
