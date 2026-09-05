@@ -23,6 +23,23 @@ import cssText from './SkillDescription.css?raw';
 const _allowedTags = new Set(['font', 'i', 'b']);
 
 /**
+ * skilldescript.lub's first line is authored as "<Korean name>(<English name>)"
+ * for every skill checked so far (e.g. "그림투스(Grimtooth)", "인베넘(Envenom)") -
+ * a real bilingual field baked into the source data itself, not something we're
+ * inventing. Extract just the English part for the title; there is no
+ * equivalent English text anywhere else in this string (the body - MAX Lv,
+ * requirements, category, per-level effects - is Korean-only in every skill
+ * checked, and the server has no separate English skill data file at all,
+ * unlike items). Returns null if the first line doesn't match (so the caller
+ * can fall back to showing the raw line unchanged rather than hiding it).
+ */
+function _extractEnglishSkillName(rawDescription) {
+	const firstLine = String(rawDescription).split('\n')[0] || '';
+	const match = firstLine.match(/\(([A-Za-z][A-Za-z0-9 '\-]*)\)\s*$/);
+	return match ? match[1].trim() : null;
+}
+
+/**
  * Sanitize and format RO text with ^rrggbb color codes, ^nItemID^NNN
  * item name substitution, and newline conversion.
  *
@@ -151,9 +168,28 @@ SkillDescription.setSkill = function setSkill(id) {
 	}
 
 	const root = this.getRoot();
+	const raw = DB.getSkillDescription(id);
+	const lines = String(raw).split('\n');
+	const englishName = _extractEnglishSkillName(raw);
+
+	const titleEl = root.querySelector('.title');
+	if (titleEl) {
+		// Real data, not invented: skilldescript.lub's first line is authored
+		// as "<Korean name>(<English name>)" - use the English part as the
+		// title. If a skill's first line doesn't match that pattern (none
+		// seen so far, but not guaranteed for every skill), fall back to
+		// showing that first line as-is rather than silently dropping it.
+		titleEl.textContent = englishName || lines[0] || '';
+	}
+
 	const content = root.querySelector('.content');
 	if (content) {
-		content.innerHTML = _formatROText(DB.getSkillDescription(id));
+		// Body (MAX Lv, requirements, category, full description, per-level
+		// effects) has no English anywhere in this data - confirmed both by
+		// inspecting every line here and by an exhaustive server-side search
+		// for a separate English skill file (none exists, unlike items).
+		// Left as-is rather than inventing a translation.
+		content.innerHTML = _formatROText(lines.slice(1).join('\n'));
 	}
 
 	const hostWidth = this._host.getBoundingClientRect().width;

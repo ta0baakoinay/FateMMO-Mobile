@@ -41,6 +41,28 @@ function _isNumeric(val) {
 	return !isNaN(parseFloat(val)) && isFinite(val);
 }
 
+/**
+ * SkillInfo[id].SkillName (skillinfolist.lub) has no English data at all -
+ * confirmed by an exhaustive server-side search, unlike items. But
+ * DB.getSkillDescription(id) (skilldescript.lub, a separate file) authors
+ * its first line as "<Korean name>(<English name>)" for every skill checked
+ * so far - real, already-embedded data, not invented. Reuse that same
+ * extraction here so the skill list rows show it too, not just the
+ * description popup (UI/Components/SkillDescription/SkillDescription.js
+ * has the same regex - kept local here rather than a shared import to
+ * avoid coupling these two otherwise-independent components over one
+ * three-line helper).
+ */
+function _englishSkillName(skid) {
+	const firstLine = String(DB.getSkillDescription(skid)).split('\n')[0] || '';
+	const match = firstLine.match(/\(([A-Za-z][A-Za-z0-9 '\-]*)\)\s*$/);
+	return match ? match[1].trim() : null;
+}
+
+function _displaySkillName(skillId, sk) {
+	return _englishSkillName(skillId) || sk.SkillName;
+}
+
 export function createSkillList({
 	name,
 	htmlText,
@@ -634,7 +656,7 @@ export function createSkillList({
 				element.setAttribute('data-index', key);
 				element.setAttribute('draggable', 'true');
 				element.innerHTML =
-					`<div class="name">${_escapeHTML(sk.SkillName).substr(0, 7)}...<br/></div>` +
+					`<div class="name">${_escapeHTML(_displaySkillName(key, sk)).substr(0, 7)}...<br/></div>` +
 					'<div class="icon"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="24" height="24" /></div>' +
 					'<div class=selectable>' +
 					'<span class="level" style="display: none">' +
@@ -678,7 +700,7 @@ export function createSkillList({
 									'<td class="icon"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="24" height="24" /></td>' +
 									'<td class="levelupcontainer"></td>' +
 									'<td class="selectable">' +
-									`<div class="name">${_escapeHTML(sk.SkillName)}<br/>` +
+									`<div class="name">${_escapeHTML(_displaySkillName(key, sk))}<br/>` +
 									'<span class="level">Lv : <span class="current">0</span></span>' +
 									'</div></td>' +
 									'<td class="selectable type">' +
@@ -716,7 +738,7 @@ export function createSkillList({
 		element.setAttribute('data-index', skill.SKID);
 		element.setAttribute('draggable', 'true');
 		element.innerHTML =
-			`<div class="name">${_escapeHTML(sk.SkillName).substr(0, 7)}...<br/></div>` +
+			`<div class="name">${_escapeHTML(_displaySkillName(skill.SKID, sk)).substr(0, 7)}...<br/></div>` +
 			'<div class="icon"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="24" height="24" /></div>' +
 			'<div class="levelupcontainer"></div>' +
 			'<div class=selectable>' +
@@ -844,7 +866,7 @@ export function createSkillList({
 			'<td class="icon"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="24" height="24" /></td>' +
 			'<td class="levelupcontainer"></td>' +
 			'<td class=selectable>' +
-			`<div class="name">${_escapeHTML(sk.SkillName)}<br/>` +
+			`<div class="name">${_escapeHTML(_displaySkillName(skill.SKID, sk))}<br/>` +
 			'<span class="level">' +
 			(sk.bSeperateLv
 				? `<button class="currentDown"></button>Lv : <span class="current">${skill.level}</span> / <span class="max">${skill.level}</span><button class="currentUp"></button>`

@@ -111,9 +111,30 @@
 	left: 8px !important;
 	max-width: 96vw;
 	max-height: 92vh;
+	/* The stat rows below are absolutely positioned and were never clipped
+	   by this box, so the taller 23px row height (needed to fix the DEX/INT
+	   tap-overlap bug) made real content run past the container's old fixed
+	   130px height without anything visually containing it - the crowded/
+	   overflowing look reported. 6 rows * 23px + the 23px top offset the
+	   rows start at, plus some breathing room. */
+	height: 195px !important;
+}
+#WinStats {
+	height: 195px !important;
 }
 #WinStats .titlebar {
 	min-height: 24px;
+}
+#WinStats .panel {
+	/* Matches the :host height above minus the titlebar - same reasoning:
+	   contain the now-taller stat rows instead of letting them overflow.
+	   The panel's own background is a fixed-size decorative bmp
+	   (data-background="basic_interface/statwin_bg.bmp") sized for the
+	   original shorter panel and won't stretch to the new height - a solid
+	   backing color underneath keeps the extra space looking intentional
+	   instead of leaving a transparent gap below the artwork. */
+	height: 171px !important;
+	background-color: #d8d0c0;
 }
 #WinStats .titlebar .base {
 	width: 20px !important;

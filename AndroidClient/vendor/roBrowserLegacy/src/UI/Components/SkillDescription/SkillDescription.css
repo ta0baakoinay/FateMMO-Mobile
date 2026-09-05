@@ -11,11 +11,20 @@
 	line-height: 18px;
 	letter-spacing: 0px;
 }
-#SkillDescription .content {
-	padding: 5px;
-	border-radius: 5px;
+#SkillDescription .title {
+	padding: 6px 8px 2px 8px;
 	background-color: white;
-	width: 278px;
+	border-radius: 5px 5px 0 0;
+	font-size: 15px;
+	font-weight: bold;
+	color: #1a1a1a;
+	width: 262px;
+}
+#SkillDescription .content {
+	padding: 5px 8px 8px 8px;
+	border-radius: 0 0 5px 5px;
+	background-color: white;
+	width: 262px;
 }
 #SkillDescription .close {
 	position: absolute;
