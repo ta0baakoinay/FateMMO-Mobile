@@ -313,6 +313,12 @@ MobileUI.init = function init() {
 		toggleTouchTargeting();
 	}
 
+	// Explicit "Hotkey" button alternative (SkillDescription.js) - registered
+	// before onSkillDragDrop below so a pending pick wins if somehow both
+	// were active at once (they never should be in practice - one is a drag
+	// in progress, the other a pending tap-to-bind after that drag ended).
+	window.addEventListener('touchend', onHotkeyPickTouch, true);
+
 	// Drop a skill dragged out of the Skill window onto an F1-F9 button to
 	// bind it there (capture phase so we read window._OBJ_DRAG_ before the
 	// SkillList's own touchend handler clears it).
@@ -735,6 +741,47 @@ function updateFButtonCooldownBadges() {
 		}
 	}
 	Events.setTimeout(updateFButtonCooldownBadges, 300);
+}
+
+/**
+ * Explicit tap-driven alternative to dragging a skill onto an F-button - the
+ * SkillDescription popup's "Hotkey" button calls this instead of requiring
+ * the player to find/perform the 300ms-hold-then-drag gesture
+ * (SkillListCommon.js's onSkillTouchStart), which is easy to miss on a real
+ * touchscreen. The next tap on any F1-F9 button consumes the pending bind;
+ * tapping anything else (or waiting too long) cancels it.
+ */
+let _pendingHotkeySkill = null;
+const C_HOTKEY_PICK_TIMEOUT = 8000;
+let _hotkeyPickTimer = null;
+
+function beginHotkeyPick(skid, level) {
+	_pendingHotkeySkill = { skid: skid, level: level || 1 };
+	clearTimeout(_hotkeyPickTimer);
+	_hotkeyPickTimer = setTimeout(() => {
+		_pendingHotkeySkill = null;
+	}, C_HOTKEY_PICK_TIMEOUT);
+}
+MobileUI.beginHotkeyPick = beginHotkeyPick;
+
+function onHotkeyPickTouch(event) {
+	if (!_pendingHotkeySkill) {
+		return;
+	}
+	const t = event.changedTouches && event.changedTouches[0];
+	const hit = t && fButtonSlotAt(t.clientX, t.clientY);
+	const skill = _pendingHotkeySkill;
+	_pendingHotkeySkill = null;
+	clearTimeout(_hotkeyPickTimer);
+	if (hit) {
+		// Consume this tap entirely so the slot doesn't also fire its old
+		// binding's cast in the same touch (bindFKey's own touchend handler
+		// would otherwise also run for this same event).
+		event.stopImmediatePropagation();
+		event.preventDefault();
+		bindF(hit.index, skill.skid, skill.level);
+	}
+	// A tap anywhere else just cancels the pending pick, no error needed.
 }
 
 /** Skill dragged out of the Skill window and dropped on an F1-F9 button. */

@@ -119,17 +119,26 @@
 	width: 20px !important;
 	height: 20px !important;
 }
-#WinStats .up {
-	/* was 19px; +6 compensates for the button margin change below so row 1
-	   still lands at 23px, matching .stats/.bonus/.requirements */
-	top: 25px !important;
+/* Corrected approach: the first attempt kept the button's row footprint at
+   16px via a NEGATIVE margin-top (18px height, -2px margin), relying on
+   sibling margin collapsing to net out to 16px. That doesn't just shrink the
+   visual gap - it makes each button's box overlap (in paint/hit-test order)
+   the button below it, so tapping what looks like one stat's arrow can
+   actually hit the next one's <button> underneath (reported: tapping DEX
+   added to INT). Fixing it properly instead of re-tuning that margin: grow
+   the LABEL rows (.stats/.bonus/.requirements) to match the bigger button,
+   using the exact same width/height + POSITIVE margin-top relationship the
+   original desktop CSS already used successfully (11px + 5px margin = 16px
+   step) - just scaled up (18px + 5px margin = 23px step). Every row then
+   advances by the same 23px on both sides with only positive margins, so
+   there is no overlap to reason about. */
+#WinStats .stats div,
+#WinStats .bonus div,
+#WinStats .requirements div {
+	height: 23px !important;
 }
 #WinStats .up button {
 	width: 18px !important;
 	height: 18px !important;
-	/* 18 + (-2) = 16, restores the shared 16px row rhythm the other three
-	   columns use (.group div{height:16px}) - without this the enlarged
-	   touch target (11px -> 18px) made each row 23px instead of 16px, so
-	   the +button drifted further from its row going down the list. */
-	margin-top: -2px !important;
+	margin-top: 5px !important;
 }

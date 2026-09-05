@@ -97,6 +97,41 @@ SkillDescription.init = function init() {
 		closeBtn.addEventListener('click', () => SkillDescription.remove());
 	}
 
+	// Explicit alternative to SkillListCommon.js's drag-to-hotbar gesture
+	// (a 300ms hold + <10px movement tolerance, easy to miss on a real
+	// touchscreen) - reuses the same real functions the desktop shortcut
+	// bar / F-keys already call, just from a tap instead of a drag/keypress.
+	const useBtn = root.querySelector('.action-use');
+	if (useBtn) {
+		useBtn.addEventListener('mousedown', e => e.stopImmediatePropagation());
+		useBtn.addEventListener('click', () => {
+			if (SkillDescription.uid < 0) {
+				return;
+			}
+			try {
+				UIManager.getComponent('ShortCut').useSkill(SkillDescription.uid, SkillDescription._level || 1);
+			} catch (e) {
+				/* ShortCut not available (e.g. desktop-only build variant) */
+			}
+		});
+	}
+
+	const hotkeyBtn = root.querySelector('.action-hotkey');
+	if (hotkeyBtn) {
+		hotkeyBtn.addEventListener('mousedown', e => e.stopImmediatePropagation());
+		hotkeyBtn.addEventListener('click', () => {
+			if (SkillDescription.uid < 0) {
+				return;
+			}
+			try {
+				UIManager.getComponent('MobileUI').beginHotkeyPick(SkillDescription.uid, SkillDescription._level || 1);
+			} catch (e) {
+				/* MobileUI not available (desktop-only build variant) */
+			}
+			SkillDescription.remove();
+		});
+	}
+
 	this.draggable();
 };
 
@@ -107,6 +142,13 @@ SkillDescription.init = function init() {
  */
 SkillDescription.setSkill = function setSkill(id) {
 	this.uid = id;
+	this._level = 1;
+	try {
+		const skill = UIManager.getComponent('SkillList').getSkillById(id);
+		this._level = (skill && (skill.selectedLevel || skill.level)) || 1;
+	} catch (e) {
+		/* SkillList not available yet - fall back to level 1 */
+	}
 
 	const root = this.getRoot();
 	const content = root.querySelector('.content');

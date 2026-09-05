@@ -29,3 +29,28 @@
 	background-repeat: no-repeat;
 	background-color: transparent;
 }
+
+/* Use / Hotkey action row - mobile-oriented alternative to the drag-to-
+   hotbar gesture (which needs a 300ms hold + very small movement tolerance,
+   easy to miss on a real touchscreen). Tapping a skill to see its
+   description now also offers explicit, discoverable actions instead of
+   requiring the drag. */
+#SkillDescription .actions {
+	display: flex;
+	gap: 4px;
+	margin-top: 4px;
+	width: 278px;
+}
+#SkillDescription .actions button {
+	flex: 1;
+	height: 34px;
+	border: 1px solid #555;
+	border-radius: 4px;
+	background: #2b2f3a;
+	color: #fff;
+	font-size: 13px;
+	font-weight: bold;
+}
+#SkillDescription .actions button:active {
+	background: #454b5c;
+}
