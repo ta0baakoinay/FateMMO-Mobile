@@ -6510,7 +6510,28 @@ function loadSkillInfoList(filename, callback, onEnd) {
 					`);
 
 				// create required functions in context
-				ctx.AddSkillInfo = (
+				// Regular function, not an arrow function - wasmoon invokes
+				// registered Lua callbacks via `func.apply(thread, args)`
+				// (Vendors/wasmoon-lua5.1.js, registerFuncCallFunction), and
+				// only a regular function's `this` actually binds to that
+				// call; arrow functions ignore it. Same failure class as the
+				// v0.1.34 item-name fix: without this, resName/skillName
+				// arrive as wasmoon's own already-auto-decoded (UTF-8,
+				// lossy/wrong for this server's CP949 data) JS strings
+				// rather than raw bytes, and TextEncoding.decode() requires
+				// a Uint8Array - handed a string instead, it fails that
+				// check and silently returns '' for every single call. That
+				// made SkillInfo[id].Name (the skill ICON's resource
+				// filename, used by MobileUI.js's paintF()) empty for every
+				// skill, so every skill's icon request resolved to the same
+				// wrong path - independent of the v0.1.50 charset default
+				// fix, since the type check fails before any charset is
+				// even consulted. (SkillInfo[id].SkillName has the same bug
+				// but was masked - DBManager.js's own DisplaySkillName-style
+				// consumers actually read the skill name from a different,
+				// already-correct source: skilldescript.lub's embedded
+				// English name, not this field.)
+				ctx.AddSkillInfo = function (
 					skillId,
 					resName,
 					skillName,
@@ -6519,7 +6540,7 @@ function loadSkillInfoList(filename, callback, onEnd) {
 					bSeperateLv,
 					attackRange,
 					skillScale
-				) => {
+				) {
 					// Convert to format expected by SkillInfo.js
 					const toArray = v => {
 						if (Array.isArray(v)) {
@@ -6533,9 +6554,11 @@ function loadSkillInfoList(filename, callback, onEnd) {
 						}
 						return [];
 					};
+					const rawResName = this.getRawStringBytes(2);
+					const rawSkillName = this.getRawStringBytes(3);
 					SkillInfo[skillId] = {
-						Name: userStringDecoder.decode(resName),
-						SkillName: userStringDecoder.decode(skillName, userCharpage),
+						Name: userStringDecoder.decode(rawResName),
+						SkillName: userStringDecoder.decode(rawSkillName, userCharpage),
 						MaxLv: maxLv,
 						SpAmount: toArray(spAmount),
 						bSeperateLv: bSeperateLv,
