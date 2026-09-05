@@ -287,6 +287,31 @@
 	font-size: 11px;
 }
 
+/* Portrait icon (job icon, same GRF asset PartyFriends already uses for party
+   member lists - see BasicInfoCommon.js's 'job' case) to the left of the
+   name/level/HP/SP text, matching the reference layout. Text lines shift
+   right to make room - mobile-only, the desktop/large view is untouched. */
+#BasicInfoV4 .small .portrait {
+	position: absolute;
+	top: 4px;
+	left: 4px;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	background-color: rgba(0, 0, 0, 0.35);
+	background-size: cover;
+	background-position: center;
+	border: 2px solid rgba(255, 255, 255, 0.6);
+	box-sizing: border-box;
+}
+#BasicInfoV4 .small .line1 {
+	left: 56px;
+}
+#BasicInfoV4 .small .line2,
+#BasicInfoV4 .small .line3 {
+	left: 56px;
+}
+
 /* Menu icons: EXACTLY 5 per row, each cell 1/5 of the strip, the button
  * fills its cell and the bmp is drawn contained inside. No fixed px on the
  * button so it can never overflow the strip regardless of the bmp size. */

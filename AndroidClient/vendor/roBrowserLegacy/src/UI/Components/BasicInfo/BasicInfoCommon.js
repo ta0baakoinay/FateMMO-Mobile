@@ -481,6 +481,14 @@ export function createBasicInfo(config) {
 				root.querySelectorAll('.job_value').forEach(el => {
 					el.textContent = MonsterTable[val1];
 				});
+				// Mobile portrait icon - same GRF file / lookup PartyFriendsCommon.js
+				// already uses for party member job icons (renewalparty/icon_jobs_
+				// <job>.bmp), just applied to this panel's own portrait element.
+				root.querySelectorAll('.portrait').forEach(el => {
+					Client.loadFile(`${DB.INTERFACE_PATH}renewalparty/icon_jobs_${val1}.bmp`, url => {
+						el.style.backgroundImage = `url(${url})`;
+					});
+				});
 				break;
 
 			case 'bexp':

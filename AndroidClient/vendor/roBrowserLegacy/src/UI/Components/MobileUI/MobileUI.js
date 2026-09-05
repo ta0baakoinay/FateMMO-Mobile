@@ -88,6 +88,11 @@ let _editMode = false;
  * reloads and so buttons can be rearranged. index (0-8) -> { skid, level }.
  */
 const _fbind = Preferences.get('MobileUIFBinds', {}, 1.0);
+// Persisted free-form screen position per F-slot (percent of #buttonContainer's
+// own box, the same coordinate system the static per-button CSS top/left already
+// uses) - shared across all 4 switchSkillButtons() sets, keyed by slot index like
+// _fbind already is, not by which skill happens to be bound there.
+const _fpos = Preferences.get('MobileUIFPositions', {}, 1.0);
 const C_AUTOTARGET_DELAY = 500;
 const C_TOUCH_CLICK_GUARD = 750;
 
@@ -316,8 +321,11 @@ MobileUI.init = function init() {
 	// Make the joystick + skill cluster draggable / scalable in Edit mode.
 	setupClusterEditing(root);
 
-	// Long-press a bound F-button and drag it onto another to move/swap it.
+	// Long-press a bound F-button and drag it onto another to move/swap it
+	// (or onto free space to relocate it - see containerPercentAt/applyFPos).
 	setupFButtonDrag(root);
+	applyAllFPos(root);
+	updateFButtonCooldownBadges();
 };
 
 /* =====================================================================
@@ -562,6 +570,45 @@ function muiTap(node, fn) {
  * Drag a skill from the Skill window onto an on-screen F1-F9 button.
  * ===================================================================== */
 
+/** Convert a viewport point into %-of-#buttonContainer coordinates, the same
+ * system the static per-button top/left CSS already uses (each .FButton is
+ * position:absolute inside #buttonContainer, which is itself the containing
+ * block since it establishes its own positioning context). */
+function containerPercentAt(x, y) {
+	const root = MobileUI.getRoot();
+	const container = root && root.querySelector('#buttonContainer');
+	if (!container) {
+		return null;
+	}
+	const r = container.getBoundingClientRect();
+	if (!r.width || !r.height) {
+		return null;
+	}
+	return {
+		left: Math.min(100, Math.max(0, ((x - r.left) / r.width) * 100)),
+		top: Math.min(100, Math.max(0, ((y - r.top) / r.height) * 100))
+	};
+}
+
+/** Move an F-button to a persisted free-form position (percent of
+ * #buttonContainer), overriding its default CSS top/left. */
+function applyFPos(root, index) {
+	const p = _fpos[index];
+	const btn = root && root.querySelector('#f' + (index + 1) + 'Button');
+	if (!p || !btn) {
+		return;
+	}
+	btn.style.left = p.left + '%';
+	btn.style.top = p.top + '%';
+}
+
+/** Re-apply every persisted F-button position (called once at init). */
+function applyAllFPos(root) {
+	for (let i = 0; i < 9; i++) {
+		applyFPos(root, i);
+	}
+}
+
 function fButtonSlotAt(x, y) {
 	const root = MobileUI.getRoot();
 	for (let i = 1; i <= 9; i++) {
@@ -640,7 +687,54 @@ function paintF(index) {
 	} else {
 		btn.style.backgroundImage = '';
 		btn.classList.remove('mui-bound');
+		const badge = btn.querySelector('.mui-cooldown');
+		if (badge) {
+			badge.remove();
+		}
 	}
+}
+
+/**
+ * Numeric cooldown-remaining badge on each mobile F-button, reusing
+ * ShortCut.js's own delay tracking (ShortCut.getSkillRemainingDelay) rather
+ * than tracking cooldowns separately - that state already comes from real
+ * server packets (ShortCut.setSkillDelay/setGlobalSkillDelay). Self-
+ * reschedules via Events.setTimeout, matching this file's existing
+ * onAutoFollow pattern rather than a raw setInterval.
+ */
+function updateFButtonCooldownBadges() {
+	const root = MobileUI.getRoot();
+	const SC = shortCut();
+	if (root && SC && SC.getSkillRemainingDelay) {
+		for (let i = 0; i < 9; i++) {
+			const b = _fbind[i];
+			const btn = root.querySelector('#f' + (i + 1) + 'Button');
+			if (!btn) {
+				continue;
+			}
+			if (!b || !b.skid) {
+				const stale = btn.querySelector('.mui-cooldown');
+				if (stale) {
+					stale.remove();
+				}
+				continue;
+			}
+			const remainingMs = SC.getSkillRemainingDelay(b.skid);
+			let badge = btn.querySelector('.mui-cooldown');
+			if (remainingMs > 0) {
+				if (!badge) {
+					badge = document.createElement('div');
+					badge.className = 'mui-cooldown';
+					btn.appendChild(badge);
+				}
+				const secs = Math.ceil(remainingMs / 1000);
+				badge.textContent = secs > 99 ? '99+' : String(secs);
+			} else if (badge) {
+				badge.remove();
+			}
+		}
+	}
+	Events.setTimeout(updateFButtonCooldownBadges, 300);
 }
 
 /** Skill dragged out of the Skill window and dropped on an F1-F9 button. */
@@ -768,6 +862,15 @@ function setupFButtonDrag(root) {
 						bindF(_fdrag.from, dst.skid, dst.level); // swap
 					} else {
 						clearF(_fdrag.from); // move
+					}
+				} else if (!hit) {
+					// Dropped on free space (not on another F-button) - relocate
+					// this slot's icon there instead of only supporting swap.
+					const pos = containerPercentAt(tt.clientX, tt.clientY);
+					if (pos) {
+						_fpos[_fdrag.from] = pos;
+						_fpos.save();
+						applyFPos(root, _fdrag.from);
 					}
 				}
 				e.stopPropagation(); // don't also fire the F-key press

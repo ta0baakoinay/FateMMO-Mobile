@@ -119,7 +119,17 @@
 	width: 20px !important;
 	height: 20px !important;
 }
+#WinStats .up {
+	/* was 19px; +6 compensates for the button margin change below so row 1
+	   still lands at 23px, matching .stats/.bonus/.requirements */
+	top: 25px !important;
+}
 #WinStats .up button {
 	width: 18px !important;
 	height: 18px !important;
+	/* 18 + (-2) = 16, restores the shared 16px row rhythm the other three
+	   columns use (.group div{height:16px}) - without this the enlarged
+	   touch target (11px -> 18px) made each row 23px instead of 16px, so
+	   the +button drifted further from its row going down the list. */
+	margin-top: -2px !important;
 }

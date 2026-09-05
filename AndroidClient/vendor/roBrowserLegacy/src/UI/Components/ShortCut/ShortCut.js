@@ -727,6 +727,29 @@ ShortCut.setSkillDelay = function setSkillDelay(ID, delay) {
 };
 
 /**
+ * Read-only: remaining cooldown (ms) for a skill, or 0 if it's off cooldown /
+ * not tracked. Reuses the same _list/Renderer.tick state setSkillDelay/
+ * setGlobalSkillDelay already maintain from real server packets - for
+ * consumers (e.g. MobileUI's mobile skill-button badges) that want to show a
+ * countdown without duplicating cooldown tracking.
+ *
+ * @param {number} ID of the skill
+ * @return {number} remaining ms, or 0
+ */
+ShortCut.getSkillRemainingDelay = function getSkillRemainingDelay(ID) {
+	for (let i = 0; i < _list.length; i++) {
+		const element = _list[i];
+		if (element && element.isSkill && element.ID == ID && element.Delay) {
+			const remaining = element.Delay - Renderer.tick;
+			if (remaining > 0) {
+				return remaining;
+			}
+		}
+	}
+	return 0;
+};
+
+/**
  * Remove an element from shortcut
  *
  * @param {boolean} is a skill ?
