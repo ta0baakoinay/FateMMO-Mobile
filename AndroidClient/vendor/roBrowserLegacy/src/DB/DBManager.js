@@ -5107,6 +5107,7 @@ function loadItemInfo(filename, callback, onEnd) {
 				// directly off the Lua stack as raw bytes (argument N is stack index
 				// N), which can then be decoded correctly instead.
 				let _itemDbgCount = 0;
+				const _itemDbgLines = [];
 				const _itemDbg = (label, ItemID, rawBytes, decoded, preFixValue) => {
 					if (_itemDbgCount >= 12) {
 						return;
@@ -5117,20 +5118,24 @@ function loadItemInfo(filename, callback, onEnd) {
 								.map(b => b.toString(16).padStart(2, '0'))
 								.join(' ')
 						: 'null';
-					console.log(
-						'%c[ITEMDBG] ' + label + ' id=' + ItemID + ' rawLen=' + (rawBytes ? rawBytes.length : 'null') +
-							' hex=' + hex + ' decoded="' + decoded + '" preFix="' + preFixValue + '"',
-						'color:#e08a00'
-					);
-					// Diagnostic-only: this window between item loading and the next
-					// flood of network packets is too narrow to reliably screenshot
-					// (confirmed - two attempts already missed it). Force a real pause
-					// with an actual native dialog the tester has to dismiss, instead
-					// of a timed delay that's just a smaller version of the same
-					// problem. Fires once per session (after the 12th logged call).
+					const line =
+						label + ' id=' + ItemID + ' rawLen=' + (rawBytes ? rawBytes.length : 'null') +
+							'\nhex=' + hex + '\ndecoded="' + decoded + '"\npreFix="' + preFixValue + '"';
+					console.log('%c[ITEMDBG] ' + line.replace(/\n/g, ' '), 'color:#e08a00');
+					_itemDbgLines.push(line);
+					// Diagnostic-only: other Lua tables load concurrently and their own
+					// "Loading file ..." lines flood the shared 40-line on-screen log
+					// ring buffer, which evicted every [ITEMDBG] line before the alert
+					// below could even be screenshotted (confirmed - v0.1.38 test showed
+					// the alert firing but zero ITEMDBG lines visible by then). Put the
+					// captured data directly in the alert's own message text instead of
+					// relying on the shared log buffer still holding it by the time the
+					// tester looks - that buffer's survival is not guaranteed regardless
+					// of how long the pause lasts. Fires once per session (after the
+					// 12th logged call).
 					if (_itemDbgCount === 12) {
 						try {
-							alert('[ITEMDBG] capture complete - screenshot the diag log now, then tap OK to continue loading.');
+							alert('[ITEMDBG] (' + _itemDbgLines.length + ' entries)\n\n' + _itemDbgLines.join('\n\n'));
 						} catch (e) {
 							/* ignore */
 						}
