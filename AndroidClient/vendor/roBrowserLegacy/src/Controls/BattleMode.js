@@ -71,6 +71,11 @@ class BattleMode {
 			}
 			return true;
 		}
+		console.log(
+			'[MobileBtn] BattleMode.process: no shortcut bound to "' +
+				keyName +
+				'" - no-op (correct, not a bug: drag a skill/item onto that hotbar slot first, same as the desktop client).'
+		);
 		return false;
 	}
 

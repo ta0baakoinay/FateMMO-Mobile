@@ -105,9 +105,16 @@ let _joystickThumb = null;
  */
 function bindButton(root, selector, handler) {
 	const el = root.querySelector(selector);
+	if (!el) {
+		console.warn('[MobileBtn] ' + selector + ' not found in DOM - cannot bind.');
+	}
 	if (el) {
 		let touchHandled = false;
 		let releaseTimer = null;
+		const loggedHandler = event => {
+			console.log('[MobileBtn] ' + selector + ' activated');
+			handler(event);
+		};
 
 		const clearGuard = () => {
 			if (releaseTimer !== null) {
@@ -132,12 +139,12 @@ function bindButton(root, selector, handler) {
 				event.stopImmediatePropagation();
 				return;
 			}
-			handler(event);
+			loggedHandler(event);
 		});
 		el.addEventListener('touchstart', event => {
 			touchHandled = true;
 			clearGuard();
-			handler(event);
+			loggedHandler(event);
 		});
 		el.addEventListener('touchend', releaseGuard);
 		el.addEventListener('touchcancel', releaseGuard);
@@ -876,6 +883,7 @@ function toggleFullScreen() {
  * @param {number} keyId
  */
 function keyPress(k) {
+	console.log('[MobileBtn] keyPress: dispatching synthetic keydown keyCode=' + k);
 	const roWindow = window;
 	roWindow.document.getElementsByTagName('body')[0].focus();
 	roWindow.dispatchEvent(
@@ -1148,6 +1156,11 @@ function attackTargeted() {
 		entityFocus = EntityManager.getFocusEntity();
 	}
 
+	if (!entityFocus) {
+		console.log('[MobileBtn] attackTargeted: no target focused and none found nearby - no-op (this is correct, not a bug: tap an enemy to target it first, same as the desktop client).');
+		return;
+	}
+
 	if (entityFocus) {
 		const out = [];
 		const count = PathFinding.search(
@@ -1160,6 +1173,7 @@ function attackTargeted() {
 		);
 
 		if (!count) {
+			console.log('[MobileBtn] attackTargeted: target out of pathable range - no-op.');
 			return true;
 		}
 
@@ -1290,6 +1304,7 @@ function pickUpItem() {
 	const closestItem = EntityManager.getClosestEntity(player, Session.Entity.constructor.TYPE_ITEM);
 
 	if (!closestItem) {
+		console.log('[MobileBtn] pickUpItem: no item entity on the ground nearby - no-op (correct, not a bug).');
 		return;
 	}
 
