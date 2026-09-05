@@ -30,6 +30,27 @@ input,
 textarea,
 select {
 	touch-action: manipulation;
+	/* Chromium's UA stylesheet resolves an input's own `color` from the
+	   system light/dark scheme (not inherited from ancestors), independent
+	   of whatever this component's own CSS declares on its container - most
+	   components here never set `color` on their <input> at all (WinLogin,
+	   Storage search, Vending, Guild/Clan name fields, InputBox, etc.), so
+	   typed text can render black-on-black-ish against this project's dark
+	   glass panels/GRF art depending on the device's light/dark setting,
+	   looking like nothing is being typed. Same failure class already fixed
+	   once for item name/quantity text (ItemInfo.css/InventoryV2.css) - same
+	   fix here: force a visible fill + an outline that holds up regardless
+	   of what's actually behind the field. Any component with its own
+	   explicit `color`/`text-shadow` on `input` (e.g. ChatBox) overrides
+	   this via normal CSS specificity/source order - this is only the
+	   fallback for everything that never set one. */
+	color: #fff;
+	caret-color: #fff;
+	text-shadow:
+		-1px -1px 0 #000,
+		1px -1px 0 #000,
+		-1px 1px 0 #000,
+		1px 1px 0 #000;
 }
 
 canvas {

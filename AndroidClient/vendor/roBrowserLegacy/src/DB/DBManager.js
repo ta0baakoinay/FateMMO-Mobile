@@ -401,10 +401,47 @@ class DB {
 					// this is not official, its a translation file (same pattern as
 					// Towninfo/Sign_Data/OngoingQuests above) - AddItem/AddItemXDesc
 					// fully reset an item's fields each time they're called for it,
-					// so items covered by SystemEN/itemInfo.lua end up English, and
-					// items it doesn't cover keep their correct Korean text from the
-					// pass above instead of being blanked.
-					tryLoadLuaAliases(loadItemInfo, getSystemAliases('SystemEN/itemInfo.lua'), null, onItemInfoEnd);
+					// so items covered by the English file end up English, and items
+					// it doesn't cover keep their correct Korean text from the pass
+					// above instead of being blanked.
+					//
+					// NOTE: SystemEN/itemInfo.lua (the "obvious" path) is only a thin
+					// loader script - its own main() calls Lua's require() to pull in
+					// the real data from SystemEN/LuaFiles514/itemInfo.lua, but
+					// loadItemInfo() deliberately never calls a loaded file's own
+					// main() (see the comment above main_item() - it reads the global
+					// `tbl` directly instead, specifically so it doesn't matter which
+					// file defines main()). Since nothing here implements require(),
+					// pointing at SystemEN/itemInfo.lua would execute successfully but
+					// leave `tbl` empty (silently 0 items translated - confirmed via
+					// SSH: that file's own tbl = {} at the top, only populated inside
+					// main()/require(), which never runs). SystemEN/LuaFiles514/
+					// itemInfo.lua is the actual self-contained data file - verified
+					// over SSH it defines `tbl = { [501] = {unidentifiedDisplayName=
+					// "Red Potion", ...}, ... }` directly at the top level, same shape
+					// main_item() already expects from the Korean file.
+					tryLoadLuaAliases(
+						loadItemInfo,
+						getSystemAliases('SystemEN/LuaFiles514/itemInfo.lua'),
+						null,
+						() => {
+							// One-time, non-blocking sanity check: item 501 (Red Potion)
+							// is present in every RO item DB and its English text is
+							// known ahead of time from the source file itself, so this
+							// confirms the overlay actually populated real data instead
+							// of silently no-op'ing again (the exact failure this
+							// replaced). Logs total covered item count too.
+							const ref = ItemTable[501];
+							console.log(
+								'[ItemInfo] Korean+English load done. Total items: ' +
+									Object.keys(ItemTable).length +
+									'. Sanity check id=501 identifiedDisplayName="' +
+									(ref && ref.identifiedDisplayName) +
+									'" (expect "Red Potion").'
+							);
+							onItemInfoEnd();
+						}
+					);
 				});
 			}
 
