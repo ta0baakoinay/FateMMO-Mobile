@@ -784,6 +784,82 @@ function paintF(index) {
  * reschedules via Events.setTimeout, matching this file's existing
  * onAutoFollow pattern rather than a raw setInterval.
  */
+/**
+ * Diagnostic-only: the reported "duplicate skill icon" on F-buttons has
+ * survived one theory-driven fix already (v0.1.48's free-drag collision
+ * check, which turned out not to be the actual cause - confirmed still
+ * happening on that exact build). Rather than guess again, proactively
+ * watch every button pair across all 4 switchSkillButtons() sets (F1-9,
+ * 1-9, QWERTYUIO, ASDFGHJKL - they all share identical default screen
+ * coordinates by design, so an incompletely-hidden inactive set would
+ * look exactly like this) for real visual overlap, and log full state for
+ * both buttons the moment it happens - once per pair, not spammed every
+ * tick. This will directly show whether it's a same-set position
+ * collision, a cross-set visibility leak, or something else entirely.
+ */
+const _loggedOverlapPairs = new Set();
+function watchFButtonOverlap(root) {
+	const allIds = [
+		'f1Button', 'f2Button', 'f3Button', 'f4Button', 'f5Button', 'f6Button', 'f7Button', 'f8Button', 'f9Button',
+		'n1Button', 'n2Button', 'n3Button', 'n4Button', 'n5Button', 'n6Button', 'n7Button', 'n8Button', 'n9Button',
+		'qButton', 'wButton', 'eButton', 'rButton', 'tButton', 'yButton', 'uButton', 'iButton', 'oButton',
+		'aButton', 'sButton', 'dButton', 'fButton', 'gButton', 'hButton', 'jButton', 'kButton', 'lButton'
+	];
+	const rects = [];
+	allIds.forEach(id => {
+		const el = root.querySelector('#' + id);
+		if (!el) {
+			return;
+		}
+		const r = el.getBoundingClientRect();
+		const visible = window.getComputedStyle(el).visibility !== 'hidden' && r.width > 0;
+		if (visible) {
+			rects.push({ id, el, r });
+		}
+	});
+	for (let a = 0; a < rects.length; a++) {
+		for (let b = a + 1; b < rects.length; b++) {
+			const A = rects[a];
+			const B = rects[b];
+			const overlapX = Math.min(A.r.right, B.r.right) - Math.max(A.r.left, B.r.left);
+			const overlapY = Math.min(A.r.bottom, B.r.bottom) - Math.max(A.r.top, B.r.top);
+			if (overlapX > A.r.width * 0.4 && overlapY > A.r.height * 0.4) {
+				const pairKey = A.id < B.id ? A.id + '+' + B.id : B.id + '+' + A.id;
+				if (_loggedOverlapPairs.has(pairKey)) {
+					continue;
+				}
+				_loggedOverlapPairs.add(pairKey);
+				const describe = x => {
+					const idx = parseInt(x.id.match(/f?(\d+)Button/)?.[1], 10);
+					const bound = !isNaN(idx) && x.id.startsWith('f') ? _fbind[idx - 1] : undefined;
+					return {
+						id: x.id,
+						classes: x.el.className,
+						inlineStyle: x.el.getAttribute('style'),
+						rect: { left: Math.round(x.r.left), top: Math.round(x.r.top), w: Math.round(x.r.width), h: Math.round(x.r.height) },
+						boundSkill: bound ? bound.skid + '@lvl' + bound.level : undefined
+					};
+				};
+				const msg =
+					'[MobileBtn][OVERLAP] ' + pairKey + '\n\n' +
+					'A: ' + JSON.stringify(describe(A), null, 1) + '\n\n' +
+					'B: ' + JSON.stringify(describe(B), null, 1);
+				console.warn(msg);
+				// Console lines get lost fast once other logs flood the diag
+				// overlay's small ring buffer (confirmed during earlier item-
+				// translation debugging) - a blocking alert guarantees this
+				// is actually readable/screenshottable instead of scrolling
+				// away before anyone can look at it. Fires once per pair.
+				try {
+					alert(msg);
+				} catch (e) {
+					/* ignore */
+				}
+			}
+		}
+	}
+}
+
 function updateFButtonCooldownBadges() {
 	const root = MobileUI.getRoot();
 	const SC = shortCut();
@@ -815,6 +891,9 @@ function updateFButtonCooldownBadges() {
 				badge.remove();
 			}
 		}
+	}
+	if (root) {
+		watchFButtonOverlap(root);
 	}
 	Events.setTimeout(updateFButtonCooldownBadges, 300);
 }
