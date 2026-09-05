@@ -284,7 +284,23 @@ class DB {
 	/**
 	 * @type {string} interface path
 	 */
-	static INTERFACE_PATH = 'data/texture/\xc0\xaf\xc0\xfa\xc0\xce\xc5\xcd\xc6\xe4\xc0\xcc\xbd\xba/';
+	// Was: 'data/texture/\xc0\xaf\xc0\xfa\xc0\xce\xc5\xcd\xc6\xe4\xc0\xcc\xbd\xba/' -
+	// the CP949 BYTES of "유저인터페이스" stored as individual JS char codes
+	// (U+00C0, U+00AF, ...). When a URL is built from that string the browser
+	// percent-encodes those chars as UTF-8 (%C3%80%C2%AF...), producing a
+	// mojibake path that this deployment's RemoteClient cannot resolve.
+	// Verified directly against the live server (8 HTTP tests, 4 files):
+	//   utf8 "유저인터페이스"  -> 200 + valid BMPs (titlebar 12x17, close 9x10,
+	//                            item/tf_hiding.bmp 24x24, item/tf_poison.bmp 24x24)
+	//   mojibake (old form)  -> 200 but a small NON-BMP payload every time
+	//                            (188/292/497/524 bytes - not an image at all)
+	//   raw CP949 percent-encoding -> 404
+	// Because every request through this constant returned a non-image, every
+	// skill icon rendered the same broken graphic regardless of which skill was
+	// bound - the "same icon duplicated for every skill" symptom. The server's
+	// PathMapping layer resolves real UTF-8 Korean paths to their CP949 GRF
+	// equivalents, so using the actual Korean string is what it expects.
+	static INTERFACE_PATH = 'data/texture/유저인터페이스/';
 
 	/**
 	 * @type {string} lua path
