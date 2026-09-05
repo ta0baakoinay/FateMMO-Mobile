@@ -5122,6 +5122,19 @@ function loadItemInfo(filename, callback, onEnd) {
 							' hex=' + hex + ' decoded="' + decoded + '" preFix="' + preFixValue + '"',
 						'color:#e08a00'
 					);
+					// Diagnostic-only: this window between item loading and the next
+					// flood of network packets is too narrow to reliably screenshot
+					// (confirmed - two attempts already missed it). Force a real pause
+					// with an actual native dialog the tester has to dismiss, instead
+					// of a timed delay that's just a smaller version of the same
+					// problem. Fires once per session (after the 12th logged call).
+					if (_itemDbgCount === 12) {
+						try {
+							alert('[ITEMDBG] capture complete - screenshot the diag log now, then tap OK to continue loading.');
+						} catch (e) {
+							/* ignore */
+						}
+					}
 				};
 				ctx.AddItem = function (
 					ItemID,

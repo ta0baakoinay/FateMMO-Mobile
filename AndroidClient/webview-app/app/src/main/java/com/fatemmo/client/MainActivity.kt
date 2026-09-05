@@ -1,6 +1,7 @@
 package com.fatemmo.client
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -9,6 +10,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
+import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -140,6 +142,25 @@ class MainActivity : ComponentActivity() {
 
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 if (newProgress == 100) Log.i(TAG, "web load 100%")
+            }
+
+            // Not overridden before now, so window.alert() had no guaranteed
+            // behavior in this WebView (base WebChromeClient may silently no-op
+            // rather than actually blocking). Needed for a diagnostic pause in
+            // the JS layer (roBrowser) that must reliably hold execution until
+            // the tester dismisses it - a plain console log isn't enough since
+            // the on-screen diag overlay's log buffer gets overwritten too fast
+            // to reliably screenshot otherwise. Harmless to keep generally.
+            override fun onJsAlert(
+                view: WebView, url: String, message: String, result: JsResult
+            ): Boolean {
+                AlertDialog.Builder(this@MainActivity)
+                    .setMessage(message)
+                    .setPositiveButton("OK") { _, _ -> result.confirm() }
+                    .setOnCancelListener { result.confirm() }
+                    .setCancelable(false)
+                    .show()
+                return true
             }
         }
 
