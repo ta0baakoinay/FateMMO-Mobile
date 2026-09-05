@@ -138,6 +138,43 @@ export function createWinStats({ name, htmlText, cssText, hasTraits }) {
 		.column1 { top: 5px !important; }
 		.column2 { top: 5px !important; }
 		.up { top: 2px !important; }
+
+		/* Restore compact desktop sizing while embedded (under Equipment's
+		   own window) - the mobile touch-sizing overrides in each version's
+		   own CSS file (e.g. WinStatsV1.css's bigger rows/+buttons and taller
+		   container, added for the standalone toggled Status window) target
+		   the SAME shared #WinStats/.panel/.stats/.up elements this embed
+		   mode reuses, and were never scoped away from it - so an embedded
+		   preview that's supposed to be a small strip attached under
+		   Equipment was inheriting the full standalone window's size,
+		   overflowing well past where Equipment expected it to end and
+		   visually colliding with whatever else was on screen (reported as
+		   "duplicate/overlapping stats" when Equipment + Status were both
+		   open, which is every screenshot this was seen in). Same
+		   #WinStats-scoped specificity as those rules, injected later in the
+		   shadow root (only while embed() is active), so it correctly wins
+		   while embedded and correctly stops applying the moment unembed()
+		   removes this stylesheet. */
+		#WinStats,
+		:host {
+			height: auto !important;
+			max-height: none !important;
+			zoom: 1 !important;
+		}
+		#WinStats .panel {
+			height: auto !important;
+			background-color: transparent !important;
+		}
+		#WinStats .stats div,
+		#WinStats .bonus div,
+		#WinStats .requirements div {
+			height: 16px !important;
+		}
+		#WinStats .up button {
+			width: 11px !important;
+			height: 11px !important;
+			margin-top: 5px !important;
+		}
 	`;
 
 	let _embedStyleEl = null;

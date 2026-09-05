@@ -331,6 +331,7 @@ MobileUI.init = function init() {
 	// (or onto free space to relocate it - see containerPercentAt/applyFPos).
 	setupFButtonDrag(root);
 	applyAllFPos(root);
+	sanitizeFPos(root);
 	updateFButtonCooldownBadges();
 };
 
@@ -613,6 +614,81 @@ function applyAllFPos(root) {
 	for (let i = 0; i < 9; i++) {
 		applyFPos(root, i);
 	}
+}
+
+/**
+ * One-time cleanup for positions saved before overlapsAnotherFButton()
+ * existed (v0.1.44-47 had no collision check at all, so a free-drag could
+ * already have saved two slots on top of each other - the reported "F8
+ * icon looks duplicated"). The collision check above only stops it from
+ * happening again; this actually un-does an already-saved overlap so
+ * existing installs self-heal on the next load instead of staying broken
+ * until the player notices and manually re-drags it away.
+ */
+function sanitizeFPos(root) {
+	let changed = false;
+	for (let i = 0; i < 9; i++) {
+		if (!_fpos[i]) {
+			continue;
+		}
+		const btn = root.querySelector('#f' + (i + 1) + 'Button');
+		if (!btn) {
+			continue;
+		}
+		const r = btn.getBoundingClientRect();
+		if (!r.width) {
+			continue;
+		}
+		const cx = r.left + r.width / 2;
+		const cy = r.top + r.height / 2;
+		if (overlapsAnotherFButton(i, cx, cy)) {
+			delete _fpos[i];
+			btn.style.left = '';
+			btn.style.top = '';
+			changed = true;
+		}
+	}
+	if (changed) {
+		_fpos.save();
+	}
+}
+
+/**
+ * Whether dropping at (x,y) would visually overlap another F-button's
+ * CURRENT on-screen position - root-cause fix for icons overlapping/
+ * "duplicating" when free-dragged near another slot: fButtonSlotAt() only
+ * catches an EXACT hit inside another button's rect (used for swap/bind),
+ * so a drop just outside that rect but still close enough to visually
+ * collide (given the buttons' own size plus their translate(-50%,-50%)
+ * centering) was never rejected. Checked against real getBoundingClientRect()
+ * sizes rather than the %-based target coordinates, so it stays correct
+ * regardless of screen size/zoom.
+ */
+function overlapsAnotherFButton(excludeIndex, x, y) {
+	const root = MobileUI.getRoot();
+	if (!root) {
+		return false;
+	}
+	for (let i = 0; i < 9; i++) {
+		if (i === excludeIndex) {
+			continue;
+		}
+		const btn = root.querySelector('#f' + (i + 1) + 'Button');
+		if (!btn) {
+			continue;
+		}
+		const r = btn.getBoundingClientRect();
+		if (!r.width) {
+			continue;
+		}
+		const cx = r.left + r.width / 2;
+		const cy = r.top + r.height / 2;
+		const minDist = Math.max(r.width, r.height); // one full button-width of separation
+		if (Math.hypot(x - cx, y - cy) < minDist) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function fButtonSlotAt(x, y) {
@@ -910,9 +986,14 @@ function setupFButtonDrag(root) {
 					} else {
 						clearF(_fdrag.from); // move
 					}
-				} else if (!hit) {
-					// Dropped on free space (not on another F-button) - relocate
-					// this slot's icon there instead of only supporting swap.
+				} else if (!hit && !overlapsAnotherFButton(_fdrag.from, tt.clientX, tt.clientY)) {
+					// Dropped on free space (not on, or too close to, another
+					// F-button) - relocate this slot's icon there instead of
+					// only supporting swap. The overlap check is the actual
+					// fix for icons visually overlapping/"duplicating" after
+					// a free-drag - fButtonSlotAt() alone only rejects an
+					// EXACT hit inside another button's rect, not a near-miss
+					// still close enough to collide once rendered.
 					const pos = containerPercentAt(tt.clientX, tt.clientY);
 					if (pos) {
 						_fpos[_fdrag.from] = pos;
@@ -920,6 +1001,9 @@ function setupFButtonDrag(root) {
 						applyFPos(root, _fdrag.from);
 					}
 				}
+				// Dropped too close to another button without landing exactly
+				// on it: silently keep the current position rather than
+				// creating a visual overlap.
 				e.stopPropagation(); // don't also fire the F-key press
 			}
 			_fdrag.active = false;
