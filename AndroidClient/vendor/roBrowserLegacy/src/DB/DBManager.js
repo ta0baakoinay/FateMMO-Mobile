@@ -5106,6 +5106,23 @@ function loadItemInfo(filename, callback, onEnd) {
 				// this.getRawStringBytes(stackIndex) re-reads the same argument
 				// directly off the Lua stack as raw bytes (argument N is stack index
 				// N), which can then be decoded correctly instead.
+				let _itemDbgCount = 0;
+				const _itemDbg = (label, ItemID, rawBytes, decoded, preFixValue) => {
+					if (_itemDbgCount >= 12) {
+						return;
+					}
+					_itemDbgCount++;
+					const hex = rawBytes
+						? Array.from(rawBytes.slice(0, 24))
+								.map(b => b.toString(16).padStart(2, '0'))
+								.join(' ')
+						: 'null';
+					console.log(
+						'%c[ITEMDBG] ' + label + ' id=' + ItemID + ' rawLen=' + (rawBytes ? rawBytes.length : 'null') +
+							' hex=' + hex + ' decoded="' + decoded + '" preFix="' + preFixValue + '"',
+						'color:#e08a00'
+					);
+				};
 				ctx.AddItem = function (
 					ItemID,
 					unidentifiedDisplayName,
@@ -5115,11 +5132,16 @@ function loadItemInfo(filename, callback, onEnd) {
 					slotCount,
 					ClassNum
 				) {
+					const rawUnidentified = this.getRawStringBytes(2);
+					const rawIdentified = this.getRawStringBytes(4);
+					const decodedUnidentified = userStringDecoder.decode(rawUnidentified, userCharpage);
+					const decodedIdentified = userStringDecoder.decode(rawIdentified, userCharpage);
+					_itemDbg('AddItem.identified', ItemID, rawIdentified, decodedIdentified, identifiedDisplayName);
 					ItemTable[ItemID] = {
 						...(typeof ItemTable[ItemID] === 'object' && ItemTable[ItemID]),
-						unidentifiedDisplayName: userStringDecoder.decode(this.getRawStringBytes(2), userCharpage),
+						unidentifiedDisplayName: decodedUnidentified,
 						unidentifiedResourceName: userStringDecoder.decode(this.getRawStringBytes(3)),
-						identifiedDisplayName: userStringDecoder.decode(this.getRawStringBytes(4), userCharpage),
+						identifiedDisplayName: decodedIdentified,
 						identifiedResourceName: userStringDecoder.decode(this.getRawStringBytes(5)),
 						unidentifiedDescriptionName: [],
 						identifiedDescriptionName: [],
@@ -5132,11 +5154,17 @@ function loadItemInfo(filename, callback, onEnd) {
 					return 1;
 				};
 				ctx.AddItemUnidentifiedDesc = function (ItemID, v) {
-					ItemTable[ItemID].unidentifiedDescriptionName.push(userStringDecoder.decode(this.getRawStringBytes(2), userCharpage));
+					const raw = this.getRawStringBytes(2);
+					const decoded = userStringDecoder.decode(raw, userCharpage);
+					_itemDbg('AddItemUnidentifiedDesc', ItemID, raw, decoded, v);
+					ItemTable[ItemID].unidentifiedDescriptionName.push(decoded);
 					return 1;
 				};
 				ctx.AddItemIdentifiedDesc = function (ItemID, v) {
-					ItemTable[ItemID].identifiedDescriptionName.push(userStringDecoder.decode(this.getRawStringBytes(2), userCharpage));
+					const raw = this.getRawStringBytes(2);
+					const decoded = userStringDecoder.decode(raw, userCharpage);
+					_itemDbg('AddItemIdentifiedDesc', ItemID, raw, decoded, v);
+					ItemTable[ItemID].identifiedDescriptionName.push(decoded);
 					return 1;
 				};
 				ctx.AddItemEffectInfo = (ItemID, EffectID) => {
