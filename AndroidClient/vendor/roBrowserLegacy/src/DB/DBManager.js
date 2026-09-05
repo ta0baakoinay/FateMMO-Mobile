@@ -396,7 +396,16 @@ class DB {
 				tryLoadLuaAliases(loadItemInfo, iteminfoNames, null, onLoad(), true);
 			} else {
 				iteminfoNames = iteminfoNames.concat(getSystemAliases('System/itemInfo.lub'));
-				tryLoadLuaAliases(loadItemInfo, iteminfoNames, null, onLoad());
+				const onItemInfoEnd = onLoad();
+				tryLoadLuaAliases(loadItemInfo, iteminfoNames, null, () => {
+					// this is not official, its a translation file (same pattern as
+					// Towninfo/Sign_Data/OngoingQuests above) - AddItem/AddItemXDesc
+					// fully reset an item's fields each time they're called for it,
+					// so items covered by SystemEN/itemInfo.lua end up English, and
+					// items it doesn't cover keep their correct Korean text from the
+					// pass above instead of being blanked.
+					tryLoadLuaAliases(loadItemInfo, getSystemAliases('SystemEN/itemInfo.lua'), null, onItemInfoEnd);
+				});
 			}
 
 			loadLuaTable(
@@ -5106,41 +5115,6 @@ function loadItemInfo(filename, callback, onEnd) {
 				// this.getRawStringBytes(stackIndex) re-reads the same argument
 				// directly off the Lua stack as raw bytes (argument N is stack index
 				// N), which can then be decoded correctly instead.
-				let _itemDbgCount = 0;
-				const _itemDbgLines = [];
-				const _itemDbg = (label, ItemID, rawBytes, decoded, preFixValue) => {
-					if (_itemDbgCount >= 12) {
-						return;
-					}
-					_itemDbgCount++;
-					const hex = rawBytes
-						? Array.from(rawBytes.slice(0, 24))
-								.map(b => b.toString(16).padStart(2, '0'))
-								.join(' ')
-						: 'null';
-					const line =
-						label + ' id=' + ItemID + ' rawLen=' + (rawBytes ? rawBytes.length : 'null') +
-							'\nhex=' + hex + '\ndecoded="' + decoded + '"\npreFix="' + preFixValue + '"';
-					console.log('%c[ITEMDBG] ' + line.replace(/\n/g, ' '), 'color:#e08a00');
-					_itemDbgLines.push(line);
-					// Diagnostic-only: other Lua tables load concurrently and their own
-					// "Loading file ..." lines flood the shared 40-line on-screen log
-					// ring buffer, which evicted every [ITEMDBG] line before the alert
-					// below could even be screenshotted (confirmed - v0.1.38 test showed
-					// the alert firing but zero ITEMDBG lines visible by then). Put the
-					// captured data directly in the alert's own message text instead of
-					// relying on the shared log buffer still holding it by the time the
-					// tester looks - that buffer's survival is not guaranteed regardless
-					// of how long the pause lasts. Fires once per session (after the
-					// 12th logged call).
-					if (_itemDbgCount === 12) {
-						try {
-							alert('[ITEMDBG] (' + _itemDbgLines.length + ' entries)\n\n' + _itemDbgLines.join('\n\n'));
-						} catch (e) {
-							/* ignore */
-						}
-					}
-				};
 				ctx.AddItem = function (
 					ItemID,
 					unidentifiedDisplayName,
@@ -5154,7 +5128,6 @@ function loadItemInfo(filename, callback, onEnd) {
 					const rawIdentified = this.getRawStringBytes(4);
 					const decodedUnidentified = userStringDecoder.decode(rawUnidentified, userCharpage);
 					const decodedIdentified = userStringDecoder.decode(rawIdentified, userCharpage);
-					_itemDbg('AddItem.identified', ItemID, rawIdentified, decodedIdentified, identifiedDisplayName);
 					ItemTable[ItemID] = {
 						...(typeof ItemTable[ItemID] === 'object' && ItemTable[ItemID]),
 						unidentifiedDisplayName: decodedUnidentified,
@@ -5174,14 +5147,12 @@ function loadItemInfo(filename, callback, onEnd) {
 				ctx.AddItemUnidentifiedDesc = function (ItemID, v) {
 					const raw = this.getRawStringBytes(2);
 					const decoded = userStringDecoder.decode(raw, userCharpage);
-					_itemDbg('AddItemUnidentifiedDesc', ItemID, raw, decoded, v);
 					ItemTable[ItemID].unidentifiedDescriptionName.push(decoded);
 					return 1;
 				};
 				ctx.AddItemIdentifiedDesc = function (ItemID, v) {
 					const raw = this.getRawStringBytes(2);
 					const decoded = userStringDecoder.decode(raw, userCharpage);
-					_itemDbg('AddItemIdentifiedDesc', ItemID, raw, decoded, v);
 					ItemTable[ItemID].identifiedDescriptionName.push(decoded);
 					return 1;
 				};
