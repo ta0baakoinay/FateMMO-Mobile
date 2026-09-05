@@ -669,19 +669,29 @@ class DB {
 			// MapName
 			if (Configs.get('enableMapName') /*PACKETVER.value >= 20190605*/) {
 				// We allow this feature to be enabled on any version due to popular demand
-				tryLoadLuaAliases(
-					loadMapTbl,
-					getSystemAliases('System/mapInfo.lub'),
-					function (json) {
-						for (const key in json) {
-							if (json.hasOwnProperty(key)) {
-								MapInfo[key] = json[key];
-							}
+				const mergeMapTbl = json => {
+					for (const key in json) {
+						if (json.hasOwnProperty(key)) {
+							MapInfo[key] = json[key];
 						}
-						updateMapTable();
-					},
-					onLoad()
-				);
+					}
+					updateMapTable();
+				};
+				const onMapNameEnd = onLoad();
+				tryLoadLuaAliases(loadMapTbl, getSystemAliases('System/mapInfo.lub'), mergeMapTbl, () => {
+					// this is not official, its a translation file (same pattern as
+					// Towninfo/Sign_Data/OngoingQuests above) - per-map-key overlay,
+					// so a map missing from the English file keeps its Korean name
+					// instead of being blanked. Verified present on the server via
+					// SSH before wiring this in.
+					// NOTE: loadMapTbl() can't be reused here - it only populates
+					// MapInfo through ctx.AddMapDisplayName/etc calls the loaded
+					// script's own main() must trigger, and this translation file
+					// (unlike the official System/mapInfo.lub) is a bare `mapTbl =
+					// {...}` table with no main(). loadLuaValue() reads the named
+					// global table directly instead, which matches this file's shape.
+					loadLuaValue('SystemEN/mapInfo.lub', 'mapTbl', mergeMapTbl, onMapNameEnd);
+				});
 			}
 
 			// EntitySignBoard
@@ -707,16 +717,20 @@ class DB {
 
 			// Achievements
 			if (Configs.get('enableAchievements') && PACKETVER.value >= 20150513) {
-				loadLuaValue(
-					'System/achievement_list.lub',
-					'achievement_tbl',
-					function (json) {
-						if (json) {
-							Object.assign(AchievementTable, json);
-						}
-					},
-					onLoad()
-				);
+				const mergeAchievements = json => {
+					if (json) {
+						Object.assign(AchievementTable, json);
+					}
+				};
+				const onAchievementsEnd = onLoad();
+				loadLuaValue('System/achievement_list.lub', 'achievement_tbl', mergeAchievements, () => {
+					// this is not official, its a translation file (same pattern as
+					// Towninfo/Sign_Data/OngoingQuests/mapInfo above) - per-achievement
+					// -id overlay via Object.assign, so an achievement missing from the
+					// English file keeps its Korean text instead of being blanked.
+					// Verified present on the server via SSH before wiring this in.
+					loadLuaValue('SystemEN/achievements.lub', 'achievement_tbl', mergeAchievements, onAchievementsEnd);
+				});
 			}
 
 			// Cash Shop Banner - implemented early 2018
