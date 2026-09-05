@@ -114,6 +114,18 @@ val generateRoBrowserConfig by tasks.registering {
                 forceUseAddress: true,
                 mobileUI: true,
                 loadingFallbackImage: "bg_loading.jpg",
+                // Re-enabled (v0.1.38): v0.1.15 turned this off for a ~5s load-time
+                // freeze, but that silently disabled the ONLY correct item-name/
+                // description source (System/itemInfo.lub via Lua). With it off,
+                // DBManager.js falls back to legacy num2item*/idnum2item* .txt
+                // tables, which the project's own v0.1.11 commit already documented
+                // as mis-encoded for this exact use. The v0.1.34 CP949 raw-byte fix
+                // (DBManager.js ctx.AddItem/etc.) was built for the Lua path and has
+                // never actually run since v0.1.15 - re-enabling this is required
+                // for that fix (and the v0.1.36/37 [ITEMDBG] diagnostics) to do
+                // anything at all. If the freeze reappears, that's a real but
+                // separate perf issue to solve without re-breaking item text.
+                loadLua: true,
                 autoLogin: ${if (env.getProperty("CLIENT_AUTOLOGIN")?.isNotBlank() == true) "[${env("CLIENT_AUTOLOGIN")}]" else "[]"},
                 remoteClient: "${env("CLIENT_REMOTE_CLIENT_URL")}",
                 servers: [{
